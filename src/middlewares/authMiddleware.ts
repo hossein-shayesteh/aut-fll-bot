@@ -67,7 +67,6 @@ export function checkGroupAdmin(
       }
     })
     .catch((error) => {
-      console.error("Error checking admin status:", error);
       bot.answerCallbackQuery(query.id, {
         text: "Error verifying your admin status. Please try again.",
         show_alert: true,

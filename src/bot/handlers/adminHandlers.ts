@@ -365,9 +365,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             }" scheduled for ${event.eventDate.toLocaleString()} has been cancelled.`,
             { parse_mode: "Markdown" }
           );
-        } catch (error) {
-          console.error(`Failed to notify user ${user.telegramId}:`, error);
-        }
+        } catch (error) {}
       }
 
       bot.editMessageText(

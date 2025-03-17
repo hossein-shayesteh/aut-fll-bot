@@ -26,10 +26,7 @@ if (!TOKEN) {
     registerAdminHandlers(bot);
     registerUserHandlers(bot);
     registerEventHandlers(bot);
-
-    console.log("Bot is up and running...");
   } catch (error) {
-    console.error("Failed to start bot:", error);
     process.exit(1);
   }
 })();

@@ -188,11 +188,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       query.data.startsWith("approve_") ||
       query.data.startsWith("reject_")
     ) {
-      // This is typically done from the admin group context, so you might put it in adminHandlers.
-
-      bot.answerCallbackQuery(query.id, {
-        text: "Handled in adminHandlers or here.",
-      });
+      // TODO: Handle registration approve or rejection
     }
   });
 
@@ -314,7 +310,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     }
 
     // 3) Forward the receipt image + info to admin group for approval
-    const caption = `*New Registration*\n\nName: ${state.firstName} ${state.lastName}\nPhone: ${state.phoneNumber}\nStudent ID: ${state.studentId}\n\nEvent ID: ${state.eventId}\nRegistration ID: ${registration.id}`;
+    const caption = `*New Registration*\n\nName: ${state.firstName} ${state.lastName}\nPhone: ${state.phoneNumber}\nStudent ID: ${state.studentId}\n`;
     bot.sendPhoto(ADMIN_GROUP_ID, photo.file_id, {
       caption,
       parse_mode: "Markdown",
