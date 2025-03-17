@@ -9,6 +9,9 @@ import {
   getCancelKeyboard,
 } from "../keyboards/userKeyboards";
 import { getActiveEvents } from "../../services/eventService";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 interface IUserState {
   state: string;
@@ -35,7 +38,7 @@ export function registerUserHandlers(bot: TelegramBot) {
       chatId,
       "Welcome to the Amirkabir University Language Center Bot.",
       {
-        reply_markup: getMainMenuKeyboard(false), // We will check if user is admin below
+        reply_markup: getMainMenuKeyboard(false),
       }
     );
   });
@@ -114,7 +117,6 @@ export function registerUserHandlers(bot: TelegramBot) {
     if (!msg.from?.id) return;
     const chatId = msg.chat.id;
     // We’ll handle the actual listing in `eventHandlers.ts`
-    // or you can do it here. Up to you.
     // For clarity, we trigger a function in `eventHandlers`.
     bot.emit("user_view_event_status", msg);
   });
@@ -154,8 +156,8 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     // Provide the relevant group/channel links
     // (Replace the placeholders with your actual links)
-    const groupLink = "https://t.me/example_group_link";
-    const channelLink = "https://t.me/example_channel_link";
+    const groupLink = process.env.PUBLIC_GROUP_LINK;
+    const channelLink = process.env.PUBLIC_CHANNEL_LINK;
 
     const message = `*Group & Channel Links*\n\n• Group: ${groupLink}\n• Channel: ${channelLink}`;
     bot.sendMessage(chatId, message, {

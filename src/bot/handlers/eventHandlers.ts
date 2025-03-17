@@ -63,6 +63,7 @@ export function registerEventHandlers(bot: TelegramBot) {
   // Handle callback queries for user event flows
   bot.on("callback_query", async (query) => {
     if (!query.data) return;
+
     const userId = query.from.id;
     const chatId = query.message?.chat.id;
     const messageId = query.message?.message_id;
@@ -96,10 +97,10 @@ export function registerEventHandlers(bot: TelegramBot) {
         reply_markup: getEventDetailsKeyboard(event.id),
       });
       bot.answerCallbackQuery(query.id);
-
-      // Alternatively, you could do `bot.sendMessage(...)` if you want a new message.
     }
+
     // 2. User wants to register for the event
+    // TODO: Get user data from database if they are available
     else if (query.data.startsWith("register_")) {
       const eventIdStr = query.data.replace("register_", "");
       const eventId = parseInt(eventIdStr, 10);
@@ -120,11 +121,10 @@ export function registerEventHandlers(bot: TelegramBot) {
     }
     // 3. Back to event list (from event details)
     else if (query.data === "back_to_events") {
-      // Typically you’d re-run your "Register for Events" flow
       // from userHandlers. Let’s do it here for simplicity:
       bot.deleteMessage(chatId, messageId);
 
-      await handleRegisterForEvents(bot, chatId, userId);
+      await handleRegisterForEvents(bot, chatId);
 
       bot.answerCallbackQuery(query.id);
     }
@@ -172,8 +172,9 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.editMessageText("Registration cancelled successfully.", {
           chat_id: chatId,
           message_id: messageId,
-          // ERROR
-          //   reply_markup: getMainMenuKeyboard(false),
+          parse_mode: "Markdown",
+          // TODO: Fix line below
+          // reply_markup: getMainMenuKeyboard(false),
         });
       } else {
         bot.answerCallbackQuery(query.id, {
@@ -188,8 +189,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       query.data.startsWith("reject_")
     ) {
       // This is typically done from the admin group context, so you might put it in adminHandlers.
-      // But if you want to handle it here, do so:
-      // ...
+
       bot.answerCallbackQuery(query.id, {
         text: "Handled in adminHandlers or here.",
       });

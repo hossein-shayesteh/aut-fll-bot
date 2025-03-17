@@ -690,10 +690,9 @@ export function registerAdminHandlers(bot: TelegramBot) {
             }
           );
 
-          // Optionally send a notification to a channel about the new event
+          // TODO: send a notification to a channel about the new event
           userStates.delete(userId);
         } catch (error) {
-          console.error("Error creating event:", error);
           bot.sendMessage(chatId, "Failed to create event. Please try again.", {
             reply_markup: getAdminMenuKeyboard(),
           });
@@ -790,7 +789,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
         userStates.delete(userId);
       } catch (error) {
-        console.error(`Error updating event ${attribute}:`, error);
         bot.sendMessage(
           chatId,
           `Failed to update event ${attribute}. Please try again.`,
@@ -813,10 +811,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
             await bot.sendMessage(user.telegramId, text);
             successCount++;
           } catch (error) {
-            console.error(
-              `Failed to send notification to user ${user.telegramId}:`,
-              error
-            );
             failCount++;
           }
         }
@@ -831,7 +825,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
         userStates.delete(userId);
       } catch (error) {
-        console.error("Error sending notifications:", error);
         bot.sendMessage(
           chatId,
           "Failed to send notifications. Please try again.",
@@ -869,10 +862,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
             );
             successCount++;
           } catch (error) {
-            console.error(
-              `Failed to send notification to user ${user.telegramId}:`,
-              error
-            );
             failCount++;
           }
         }
@@ -887,7 +876,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
         userStates.delete(userId);
       } catch (error) {
-        console.error("Error sending event notifications:", error);
         bot.sendMessage(
           chatId,
           "Failed to send notifications. Please try again.",
@@ -939,7 +927,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
       userStates.delete(userId);
     } catch (error) {
-      console.error("Error updating event poster:", error);
       bot.sendMessage(
         chatId,
         "Failed to update event poster. Please try again.",

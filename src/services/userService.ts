@@ -8,32 +8,27 @@ export async function findOrCreateUser(
   firstName?: string,
   lastName?: string
 ): Promise<User> {
-  console.log(`Attempting to find or create user with ID ${telegramId}`);
   const userRepository = AppDataSource.getRepository(User);
   let user = await userRepository.findOne({ where: { telegramId } });
 
   if (user) {
-    console.log(`User ${telegramId} found in database`);
     return user;
   }
 
   try {
-    console.log(`User ${telegramId} not found, creating new user`);
     user = new User();
     user.telegramId = telegramId;
     user.firstName = firstName || "";
     user.lastName = lastName || "";
     user.isRegistered = false;
     await userRepository.save(user);
-    console.log(`User ${telegramId} created successfully`);
+
     return user;
   } catch (e) {
     const error: any = e;
     if (error?.code === "SQLITE_CONSTRAINT" || error?.errno === 19) {
-      console.log(`User ${telegramId} already exists, fetching from database`);
       return userRepository.findOneOrFail({ where: { telegramId } });
     }
-    console.error(`Error creating user ${telegramId}:`, error);
     throw error;
   }
 }

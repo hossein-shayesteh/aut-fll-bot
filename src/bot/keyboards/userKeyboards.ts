@@ -1,6 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
 import { Event } from "../../database/models/Event";
 import { Registration } from "../../database/models/Registration";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export function getMainMenuKeyboard(
   isAdmin: boolean
@@ -9,10 +12,6 @@ export function getMainMenuKeyboard(
     [{ text: "Register for Events" }, { text: "Event Status" }],
     [{ text: "User Profile" }, { text: "Get Group & Channel Links" }],
   ];
-
-  if (isAdmin) {
-    keyboard.push([{ text: "Admin Panel" }]);
-  }
 
   return {
     keyboard,
@@ -118,12 +117,14 @@ export function getFeedbackRatingKeyboard(
 export function getEventShareKeyboard(
   eventId: number
 ): TelegramBot.InlineKeyboardMarkup {
+  const botId = process.env.BOT_ID;
+
   return {
     inline_keyboard: [
       [
         {
           text: "Share This Event",
-          url: `https://t.me/share/url?url=https://t.me/YourBotUsername?start=event_${eventId}`,
+          url: `https://t.me/share/url?url=https://t.me/${botId}?start=event_${eventId}`,
         },
       ],
     ],

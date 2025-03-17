@@ -7,6 +7,7 @@ import { registerEventHandlers } from "./handlers/eventHandlers";
 import { initializeDatabase } from "../database";
 
 dotenv.config();
+
 const TOKEN = process.env.TELEGRAM_TOKEN as string;
 if (!TOKEN) {
   throw new Error("TELEGRAM_TOKEN is not defined in the .env file");

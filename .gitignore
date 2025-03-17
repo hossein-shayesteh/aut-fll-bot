@@ -7,3 +7,4 @@ dist
 database.sqlite
 database.sqlite-journal
 
+all_project_files.txt

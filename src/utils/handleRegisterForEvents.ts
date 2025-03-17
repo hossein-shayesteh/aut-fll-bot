@@ -2,13 +2,12 @@ import TelegramBot from "node-telegram-bot-api";
 import { getMainMenuKeyboard } from "../bot/keyboards/userKeyboards";
 import { getActiveEvents } from "../services/eventService";
 
-// userHandlers.ts (or wherever the "Register for Events" logic lives)
-export async function handleRegisterForEvents(
+export const handleRegisterForEvents = async (
   bot: TelegramBot,
-  chatId: number,
-  userId: number
-) {
-  const events = await getActiveEvents(); // or getAllEvents(), etc.
+  chatId: number
+) => {
+  const events = await getActiveEvents();
+
   if (events.length === 0) {
     bot.sendMessage(chatId, "No upcoming events at the moment.", {
       reply_markup: getMainMenuKeyboard(false),
@@ -29,4 +28,4 @@ export async function handleRegisterForEvents(
       inline_keyboard: inlineKeyboard,
     },
   });
-}
+};
