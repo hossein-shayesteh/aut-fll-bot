@@ -6,8 +6,9 @@ import {
   cancelRegistration,
   updateRegistrationStatus,
   updateRegistration,
+  getRegistrationByUserAndEvent,
 } from "../../services/registrationService";
-import { getEventById } from "../../services/eventService";
+import { checkEventCapacity, getEventById } from "../../services/eventService";
 import {
   getEventDetailsKeyboard,
   getMainMenuKeyboard,
@@ -103,7 +104,6 @@ export function registerEventHandlers(bot: TelegramBot) {
     }
 
     // 2. User wants to register for the event
-    // TODO: Get user data from database if they are available
     else if (query.data.startsWith("register_")) {
       const eventIdStr = query.data.replace("register_", "");
       const eventId = parseInt(eventIdStr, 10);
@@ -455,13 +455,38 @@ export function registerEventHandlers(bot: TelegramBot) {
       state.eventId,
       photo.file_id
     );
+
     if (!registration) {
-      // Likely the event is full or there's an error
-      bot.sendMessage(
-        chatId,
-        "Failed to register. The event may be full or an error occurred.",
-        { reply_markup: getMainMenuKeyboard(false) }
+      // Check if user is already approved for this event
+      const existingReg = await getRegistrationByUserAndEvent(
+        userId,
+        state.eventId
       );
+
+      // Check if the event has capacity left
+      const isFull = await checkEventCapacity(state.eventId);
+      if (existingReg && existingReg.status === RegistrationStatus.APPROVED) {
+        // Already approved for this event
+        bot.sendMessage(
+          chatId,
+          "You are already registered and approved for this event.",
+          { reply_markup: getMainMenuKeyboard(false) }
+        );
+      } else if (!isFull) {
+        // Probably some other error (e.g., DB error)
+        bot.sendMessage(
+          chatId,
+          "Failed to register. The event may be full or an error occurred.",
+          { reply_markup: getMainMenuKeyboard(false) }
+        );
+      } else {
+        // isFull === true => event capacity is reached
+        bot.sendMessage(chatId, "Sorry, this event is already full.", {
+          reply_markup: getMainMenuKeyboard(false),
+        });
+      }
+
+      // Clear user’s registration flow
       registrationStates.delete(userId);
       return;
     }

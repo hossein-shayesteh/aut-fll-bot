@@ -36,6 +36,11 @@ export async function createRegistration(
       existingRegistration.registrationDate = new Date();
       return await registrationRepository.save(existingRegistration);
     }
+
+    if (existingRegistration.status === RegistrationStatus.APPROVED) {
+      return null;
+    }
+
     return existingRegistration;
   }
 
@@ -141,4 +146,14 @@ export async function updateRegistration(
   await registrationRepository.save(registration);
 
   return registration;
+}
+
+export async function getRegistrationByUserAndEvent(
+  userTelegramId: number,
+  eventId: number
+): Promise<Registration | null> {
+  return registrationRepository.findOne({
+    where: { userTelegramId, eventId },
+    relations: ["event", "user"],
+  });
 }
