@@ -121,3 +121,24 @@ export async function getRegistrationById(
     relations: ["user", "event"],
   });
 }
+
+export async function updateRegistration(
+  registrationId: number,
+  updateData: Partial<Registration>
+): Promise<Registration | null> {
+  const registration = await registrationRepository.findOne({
+    where: { id: registrationId },
+    relations: ["event"],
+  });
+
+  if (!registration) {
+    return null;
+  }
+
+  // Apply updates only to provided fields
+  Object.assign(registration, updateData);
+
+  await registrationRepository.save(registration);
+
+  return registration;
+}

@@ -4,6 +4,8 @@ import {
   getRegistrationById,
   getUserRegistrations,
   cancelRegistration,
+  updateRegistrationStatus,
+  updateRegistration,
 } from "../../services/registrationService";
 import { getEventById } from "../../services/eventService";
 import {
@@ -22,6 +24,7 @@ import {
 
 import dotenv from "dotenv";
 import { handleRegisterForEvents } from "../../utils/handleRegisterForEvents";
+import { RegistrationStatus } from "../../database/models/Registration";
 
 dotenv.config();
 
@@ -184,11 +187,90 @@ export function registerEventHandlers(bot: TelegramBot) {
       }
     }
     // 6. Handling admin's "Approve"/"Reject" from the admin group inline button
-    else if (
-      query.data.startsWith("approve_") ||
-      query.data.startsWith("reject_")
-    ) {
-      // TODO: Handle registration approve or rejection
+    else if (query.data.startsWith("approve_")) {
+      const regId = parseInt(query.data.replace("approve_", ""), 10);
+
+      try {
+        const registration = await getRegistrationById(regId);
+
+        if (!registration) {
+          bot.answerCallbackQuery(query.id, {
+            text: "Registration not found.",
+            show_alert: true,
+          });
+          return;
+        }
+
+        // Update registration status to "approved"
+        await updateRegistrationStatus(regId, RegistrationStatus.APPROVED);
+
+        // Notify the user about the approval
+        const userChatId = registration.user.telegramId;
+        bot.sendMessage(
+          userChatId,
+          `🎉 Your registration for the event "${registration.event.name}" has been approved!`
+        );
+
+        // Edit the message in the admin group
+        const { approvalMessageId, approvalChatId } = registration;
+
+        await bot.editMessageCaption(
+          `✅ *Registration Approved*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}\n\nEvent: "${registration.event.name}" has been approved.`,
+          {
+            chat_id: approvalChatId,
+            message_id: approvalMessageId,
+            parse_mode: "Markdown",
+            reply_markup: undefined,
+          }
+        );
+      } catch (error) {
+        bot.answerCallbackQuery(query.id, {
+          text: "Error approving registration.",
+          show_alert: true,
+        });
+      }
+    } else if (query.data.startsWith("reject_")) {
+      const regId = parseInt(query.data.replace("reject_", ""), 10);
+
+      try {
+        const registration = await getRegistrationById(regId);
+
+        if (!registration) {
+          bot.answerCallbackQuery(query.id, {
+            text: "Registration not found.",
+            show_alert: true,
+          });
+          return;
+        }
+
+        // Update registration status to "rejected"
+        await updateRegistrationStatus(regId, RegistrationStatus.REJECTED);
+
+        // Notify the user about the rejection
+        const userChatId = registration.user.telegramId;
+        bot.sendMessage(
+          userChatId,
+          `❌ Your registration for the event "${registration.event.name}" has been rejected.`
+        );
+
+        // Edit the message in the admin group
+        const { approvalMessageId, approvalChatId } = registration;
+
+        await bot.editMessageCaption(
+          `❌ *Registration Rejected*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}\n\nEvent: "${registration.event.name}" has been rejected.`,
+          {
+            chat_id: approvalChatId,
+            message_id: approvalMessageId,
+            parse_mode: "Markdown",
+            reply_markup: undefined,
+          }
+        );
+      } catch (error) {
+        bot.answerCallbackQuery(query.id, {
+          text: "Error rejecting registration.",
+          show_alert: true,
+        });
+      }
     }
   });
 
@@ -311,10 +393,21 @@ export function registerEventHandlers(bot: TelegramBot) {
 
     // 3) Forward the receipt image + info to admin group for approval
     const caption = `*New Registration*\n\nName: ${state.firstName} ${state.lastName}\nPhone: ${state.phoneNumber}\nStudent ID: ${state.studentId}\n`;
-    bot.sendPhoto(ADMIN_GROUP_ID, photo.file_id, {
-      caption,
-      parse_mode: "Markdown",
-      reply_markup: getRegistrationApprovalKeyboard(registration.id),
+
+    const adminGroupMessage = await bot.sendPhoto(
+      ADMIN_GROUP_ID,
+      photo.file_id,
+      {
+        caption,
+        parse_mode: "Markdown",
+        reply_markup: getRegistrationApprovalKeyboard(registration.id),
+      }
+    );
+
+    // Store message ID and chat ID in the registration object
+    await updateRegistration(registration.id, {
+      approvalChatId: ADMIN_GROUP_ID,
+      approvalMessageId: adminGroupMessage.message_id,
     });
 
     // 4) Confirm to user

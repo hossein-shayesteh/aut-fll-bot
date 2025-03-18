@@ -46,4 +46,10 @@ export class Registration {
 
   @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
   registrationDate!: Date;
+
+  @Column({ nullable: true })
+  approvalMessageId?: number;
+
+  @Column({ nullable: true })
+  approvalChatId?: number;
 }
