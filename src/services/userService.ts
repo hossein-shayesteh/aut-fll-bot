@@ -48,7 +48,13 @@ export async function updateUserProfile(
   if (data.lastName) user.lastName = data.lastName;
   if (data.phoneNumber) user.phoneNumber = data.phoneNumber;
   if (data.studentId) user.studentId = data.studentId;
-  if (data.isRegistered !== undefined) user.isRegistered = data.isRegistered;
+
+  // Set isRegistered to true if all fields are provided
+  if (user.firstName && user.lastName && user.phoneNumber && user.studentId) {
+    user.isRegistered = true;
+  } else {
+    user.isRegistered = false;
+  }
 
   await userRepository.save(user);
   return user;

@@ -108,17 +108,65 @@ export function registerEventHandlers(bot: TelegramBot) {
       const eventIdStr = query.data.replace("register_", "");
       const eventId = parseInt(eventIdStr, 10);
 
-      // Initialize multi-step registration
-      registrationStates.set(userId, {
-        eventId,
-        step: "collect_first_name",
-      });
+      // Retrieve user profile
+      const userProfile = await getUserProfile(userId);
+      if (!userProfile) {
+        // If somehow user not found, fallback
+        registrationStates.set(userId, {
+          eventId,
+          step: "collect_first_name",
+        });
+        bot.sendMessage(chatId, "Please enter your *First Name*:", {
+          parse_mode: "Markdown",
+          reply_markup: getCancelKeyboard(),
+        });
+        bot.answerCallbackQuery(query.id);
+        return;
+      }
 
-      // Ask user for first name
-      bot.sendMessage(chatId, "Please enter your *First Name*:", {
-        parse_mode: "Markdown",
-        reply_markup: getCancelKeyboard(),
-      });
+      // If user is already fully registered
+      // ask if they want to confirm using that info or enter new info
+      if (userProfile.isRegistered) {
+        const previewMsg =
+          `Your current profile info:\n` +
+          `• First Name: ${userProfile.firstName}\n` +
+          `• Last Name: ${userProfile.lastName}\n` +
+          `• Phone Number: ${userProfile.phoneNumber}\n` +
+          `• Student ID: ${userProfile.studentId}\n\n` +
+          `Do you want to use this info?`;
+
+        // Save the user’s existing info in the registration state so we can keep track
+        registrationStates.set(userId, {
+          eventId,
+          step: "confirm_existing_profile",
+          firstName: userProfile.firstName,
+          lastName: userProfile.lastName,
+          phoneNumber: userProfile.phoneNumber,
+          studentId: userProfile.studentId,
+        });
+
+        // Show two custom reply buttons: "Yes, use it" / "No, update info"
+        bot.sendMessage(chatId, previewMsg, {
+          reply_markup: {
+            keyboard: [
+              [{ text: "Yes, use this info" }, { text: "No, update my info" }],
+              [{ text: "Cancel" }],
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: false,
+          },
+        });
+      } else {
+        // If user not fully registered, go through the normal multi-step flow
+        registrationStates.set(userId, {
+          eventId,
+          step: "collect_first_name",
+        });
+        bot.sendMessage(chatId, "Please enter your *First Name*:", {
+          parse_mode: "Markdown",
+          reply_markup: getCancelKeyboard(),
+        });
+      }
 
       bot.answerCallbackQuery(query.id);
     }
@@ -297,6 +345,33 @@ export function registerEventHandlers(bot: TelegramBot) {
 
     // Proceed through steps
     switch (state.step) {
+      // 1. If we are confirming existing info
+      case "confirm_existing_profile":
+        if (msg.text === "Yes, use this info") {
+          // Jump directly to collecting the receipt image
+          state.step = "collect_receipt_image";
+          bot.sendMessage(
+            chatId,
+            "Please upload your *payment receipt image*:",
+            {
+              parse_mode: "Markdown",
+              reply_markup: getCancelKeyboard(),
+            }
+          );
+        } else if (msg.text === "No, update my info") {
+          // Move to normal flow
+          state.step = "collect_first_name";
+          bot.sendMessage(chatId, "Please enter your *First Name*:", {
+            parse_mode: "Markdown",
+            reply_markup: getCancelKeyboard(),
+          });
+        } else {
+          // If they typed something else, remind them
+          bot.sendMessage(chatId, "Please tap Yes or No (or Cancel).");
+        }
+        break;
+
+      // 2. Normal flow as you already have it...
       case "collect_first_name":
         state.firstName = msg.text;
         state.step = "collect_last_name";
