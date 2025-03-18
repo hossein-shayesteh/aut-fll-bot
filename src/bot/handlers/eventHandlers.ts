@@ -27,6 +27,7 @@ import dotenv from "dotenv";
 import { handleRegisterForEvents } from "../../utils/handleRegisterForEvents";
 import { RegistrationStatus } from "../../database/models/Registration";
 import { sendMessageInTopic } from "../../utils/sendMessageInTopic";
+import { sendPhotoInTopic } from "../../utils/sendPhotoInTopic";
 
 dotenv.config();
 
@@ -511,11 +512,14 @@ export function registerEventHandlers(bot: TelegramBot) {
       return;
     }
 
+    const event = await getEventById(registration.eventId);
     // 3) Forward the receipt image + info to admin group for approval
     const caption = `*New Registration*\n\nName: ${state.firstName} ${state.lastName}\nPhone: ${state.phoneNumber}\nStudent ID: ${state.studentId}\n`;
 
-    const adminGroupMessage = await bot.sendPhoto(
+    const adminGroupMessage = await sendPhotoInTopic(
+      bot,
       ADMIN_GROUP_ID,
+      event?.name || "",
       photo.file_id,
       {
         caption,
