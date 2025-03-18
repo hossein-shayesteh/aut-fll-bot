@@ -5,6 +5,7 @@ import { Registration } from "./models/Registration";
 import { Feedback } from "./models/Feedback";
 import path from "path";
 import dotenv from "dotenv";
+import { ForumTopic } from "./models/ForumTopic";
 
 dotenv.config();
 
@@ -13,7 +14,7 @@ export const AppDataSource = new DataSource({
   database:
     process.env.DATABASE_PATH ||
     path.resolve(__dirname, "../../database.sqlite"),
-  entities: [User, Event, Registration, Feedback],
+  entities: [User, Event, Registration, Feedback, ForumTopic],
   synchronize: true,
   logging: process.env.NODE_ENV !== "production",
 });

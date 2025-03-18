@@ -26,6 +26,7 @@ import {
 import dotenv from "dotenv";
 import { handleRegisterForEvents } from "../../utils/handleRegisterForEvents";
 import { RegistrationStatus } from "../../database/models/Registration";
+import { sendMessageInTopic } from "../../utils/sendMessageInTopic";
 
 dotenv.config();
 
@@ -227,6 +228,25 @@ export function registerEventHandlers(bot: TelegramBot) {
           // TODO: Fix line below
           // reply_markup: getMainMenuKeyboard(false),
         });
+
+        // Send Cancelation message to group
+        await sendMessageInTopic(
+          bot,
+          ADMIN_GROUP_ID,
+          "Registration Cancellations",
+          `❌ *Registration Cancelled*\n\nName: ${
+            registration.user.firstName ?? "N/A"
+          } ${registration.user.lastName ?? ""}\nPhone: ${
+            registration.user.phoneNumber ?? "N/A"
+          }\nStudent ID: ${registration.user.studentId ?? "N/A"}\n\nEvent: "${
+            registration.event.name
+          }"\nFee: $${
+            registration.event.fee
+          }\n\nPlease process a refund if applicable.`,
+          {
+            parse_mode: "Markdown",
+          }
+        );
       } else {
         bot.answerCallbackQuery(query.id, {
           text: "Unable to cancel registration.",
