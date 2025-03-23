@@ -103,7 +103,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         return;
       }
 
-      bot.sendMessage(chatId, "Select an event to edit:", {
+      bot.sendMessage(chatId, "Select an event:", {
         reply_markup: getAdminEventsKeyboard(events, 0),
       });
     });
@@ -125,7 +125,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         return;
       }
 
-      bot.sendMessage(chatId, "Select an event to view registrants:", {
+      bot.sendMessage(chatId, "Select an event:", {
         reply_markup: getAdminEventsKeyboard(events, 0),
       });
     });
@@ -187,7 +187,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       // Get fresh events data
       const events = await getAllEvents();
       // Update the message with the new page
-      await bot.editMessageCaption("Select an event:", {
+      await bot.editMessageText("Select an event:", {
         reply_markup: getAdminEventsKeyboard(events, pageNumber),
         chat_id: chatId,
         message_id: messageId,
@@ -548,14 +548,11 @@ export function registerAdminHandlers(bot: TelegramBot) {
         bot.deleteMessage(chatId, messageId);
       } else if (target === "event") {
         const events = await getAllEvents();
-        bot.editMessageText(
-          "Select an event to send notification to participants:",
-          {
-            chat_id: chatId,
-            message_id: messageId,
-            reply_markup: getAdminEventsKeyboard(events, 0),
-          }
-        );
+        bot.editMessageText("Select an event:", {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getAdminEventsKeyboard(events, 0),
+        });
       }
 
       bot.answerCallbackQuery(query.id);
@@ -614,7 +611,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       userState.data.capacity = capacity;
       userState.state = "CREATE_EVENT_FEE";
 
-      bot.sendMessage(chatId, "Enter the event fee (use 0 for free events):", {
+      bot.sendMessage(chatId, "Enter the event fee:", {
         reply_markup: {
           keyboard: [[{ text: "Cancel" }]],
           resize_keyboard: true,

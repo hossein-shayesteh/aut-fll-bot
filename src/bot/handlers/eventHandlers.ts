@@ -114,8 +114,8 @@ export function registerEventHandlers(bot: TelegramBot) {
       const eventId = parseInt(eventIdStr, 10);
 
       // Check if event has capacity before starting registration
-      const isFull = await checkEventCapacity(eventId);
-      if (isFull) {
+      const hasCapacity = await checkEventCapacity(eventId);
+      if (!hasCapacity) {
         bot.sendMessage(chatId, "Sorry, this event is already full.", {
           reply_markup: getMainMenuKeyboard(false),
         });
@@ -375,7 +375,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const registrations = await getUserRegistrations(userId);
 
       // Update the message with the new page
-      await bot.editMessageCaption("Your event registrations:", {
+      await bot.editMessageText("Your event registrations:", {
         reply_markup: getUserRegistrationsKeyboard(registrations, pageNumber),
         chat_id: chatId,
         message_id: messageId,
@@ -413,14 +413,22 @@ export function registerEventHandlers(bot: TelegramBot) {
         if (msg.text === "Yes, use this info") {
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
-          bot.sendMessage(
-            chatId,
-            "Please upload your *payment receipt image*:",
-            {
-              parse_mode: "Markdown",
-              reply_markup: getCancelKeyboard(),
-            }
-          );
+
+          // Get event details to show fee
+          const event = await getEventById(state.eventId);
+          const fee = event ? event.fee : "N/A";
+          const paymentInfo =
+            process.env.PAYMENT_CARD_NUMBER ||
+            "Please contact admin for payment details";
+
+          // Split the payment info to get card number and owner
+          const [cardNumber, cardOwner] = paymentInfo.split(",");
+
+          const messageText = `Please pay ${fee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
+
+          bot.sendMessage(chatId, messageText, {
+            reply_markup: getCancelKeyboard(),
+          });
         } else if (msg.text === "No, update my info") {
           // Move to normal flow
           state.step = "collect_first_name";
@@ -484,14 +492,11 @@ export function registerEventHandlers(bot: TelegramBot) {
         // Split the payment info to get card number and owner
         const [cardNumber, cardOwner] = paymentInfo.split(",");
 
-        bot.sendMessage(
-          chatId,
-          `Please pay $${fee} to:\n\n*Card Number:* ${cardNumber}\n*Card Owner:* ${cardOwner}\n\nAfter payment, upload your *payment receipt image*:`,
-          {
-            parse_mode: "Markdown",
-            reply_markup: getCancelKeyboard(),
-          }
-        );
+        const messageText = `Please pay ${fee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
+
+        bot.sendMessage(chatId, messageText, {
+          reply_markup: getCancelKeyboard(),
+        });
         break;
 
       case "collect_receipt_image":

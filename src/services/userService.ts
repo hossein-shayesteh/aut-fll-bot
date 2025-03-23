@@ -8,10 +8,10 @@ export async function findOrCreateUser(
   firstName?: string,
   lastName?: string
 ): Promise<User> {
-  const userRepository = AppDataSource.getRepository(User);
   let user = await userRepository.findOne({ where: { telegramId } });
 
   if (user) {
+    // If the user already exists, return it instead of trying to insert again
     return user;
   }
 
@@ -21,12 +21,14 @@ export async function findOrCreateUser(
     user.firstName = firstName || "";
     user.lastName = lastName || "";
     user.isRegistered = false;
+
     await userRepository.save(user);
 
     return user;
   } catch (e) {
     const error: any = e;
     if (error?.code === "SQLITE_CONSTRAINT" || error?.errno === 19) {
+      // If the user already exists, return it
       return userRepository.findOneOrFail({ where: { telegramId } });
     }
     throw error;
