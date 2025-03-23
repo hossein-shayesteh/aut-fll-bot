@@ -17,11 +17,44 @@ export function getAdminMenuKeyboard(): TelegramBot.ReplyKeyboardMarkup {
 }
 
 export function getAdminEventsKeyboard(
-  events: Event[]
+  events: Event[],
+  page: number = 0,
+  pageSize: number = 5
 ): TelegramBot.InlineKeyboardMarkup {
-  const keyboard = events.map((event) => {
+  // Calculate total pages
+  const totalPages = Math.ceil(events.length / pageSize);
+
+  // Get current page items
+  const startIndex = page * pageSize;
+  const currentPageItems = events.slice(startIndex, startIndex + pageSize);
+
+  // Create keyboard buttons for current page items
+  const keyboard = currentPageItems.map((event) => {
     return [{ text: event.name, callback_data: `admin_event_${event.id}` }];
   });
+
+  // Add navigation buttons if needed
+  const navigationRow = [];
+  if (page > 0) {
+    navigationRow.push({ text: "◀️", callback_data: `admin_page_${page - 1}` });
+  }
+
+  if (page < totalPages - 1) {
+    navigationRow.push({ text: "▶️", callback_data: `admin_page_${page + 1}` });
+  }
+
+  // Add page indicator if multiple pages
+  if (totalPages > 1) {
+    navigationRow.push({
+      text: `${page + 1}/${totalPages}`,
+      callback_data: "ignore",
+    });
+  }
+
+  // Add navigation row if it has buttons
+  if (navigationRow.length > 0) {
+    keyboard.push(navigationRow);
+  }
 
   return {
     inline_keyboard: keyboard,

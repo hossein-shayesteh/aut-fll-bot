@@ -67,9 +67,22 @@ export function getRegistrationApprovalKeyboard(
 }
 
 export function getUserRegistrationsKeyboard(
-  registrations: Registration[]
+  registrations: Registration[],
+  page: number = 0,
+  pageSize: number = 5
 ): TelegramBot.InlineKeyboardMarkup {
-  const keyboard = registrations.map((registration) => {
+  // Calculate total pages
+  const totalPages = Math.ceil(registrations.length / pageSize);
+
+  // Get current page items
+  const startIndex = page * pageSize;
+  const currentPageItems = registrations.slice(
+    startIndex,
+    startIndex + pageSize
+  );
+
+  // Create keyboard buttons for current page items
+  const keyboard = currentPageItems.map((registration) => {
     return [
       {
         text: `${registration.event.name} (${registration.status})`,
@@ -77,6 +90,35 @@ export function getUserRegistrationsKeyboard(
       },
     ];
   });
+
+  // Add navigation buttons if needed
+  const navigationRow = [];
+  if (page > 0) {
+    navigationRow.push({
+      text: "◀️",
+      callback_data: `reg_page_${page - 1}`,
+    });
+  }
+
+  if (page < totalPages - 1) {
+    navigationRow.push({
+      text: "▶️",
+      callback_data: `reg_page_${page + 1}`,
+    });
+  }
+
+  // Add page indicator
+  if (totalPages > 1) {
+    navigationRow.push({
+      text: `${page + 1}/${totalPages}`,
+      callback_data: "ignore",
+    });
+  }
+
+  // Add navigation row if it has buttons
+  if (navigationRow.length > 0) {
+    keyboard.push(navigationRow);
+  }
 
   return {
     inline_keyboard: keyboard,

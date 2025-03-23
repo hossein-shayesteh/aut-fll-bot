@@ -104,7 +104,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       }
 
       bot.sendMessage(chatId, "Select an event to edit:", {
-        reply_markup: getAdminEventsKeyboard(events),
+        reply_markup: getAdminEventsKeyboard(events, 0),
       });
     });
   });
@@ -126,7 +126,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       }
 
       bot.sendMessage(chatId, "Select an event to view registrants:", {
-        reply_markup: getAdminEventsKeyboard(events),
+        reply_markup: getAdminEventsKeyboard(events, 0),
       });
     });
   });
@@ -181,8 +181,21 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
     if (!chatId || !messageId || !data) return;
 
+    // Handle pagination for admin events list
+    if (data.startsWith("admin_page_")) {
+      const pageNumber = parseInt(data.replace("admin_page_", ""), 10);
+      // Get fresh events data
+      const events = await getAllEvents();
+      // Update the message with the new page
+      await bot.editMessageCaption("Select an event:", {
+        reply_markup: getAdminEventsKeyboard(events, pageNumber),
+        chat_id: chatId,
+        message_id: messageId,
+      });
+      bot.answerCallbackQuery(query.id);
+    }
     // Admin event selection
-    if (data.startsWith("admin_event_")) {
+    else if (data.startsWith("admin_event_")) {
       const eventId = parseInt(data.split("_")[2]);
       const event = await getEventById(eventId);
 
@@ -457,7 +470,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       bot.editMessageText("Select an event:", {
         chat_id: chatId,
         message_id: messageId,
-        reply_markup: getAdminEventsKeyboard(events),
+        reply_markup: getAdminEventsKeyboard(events, 0),
       });
 
       bot.answerCallbackQuery(query.id);
@@ -540,7 +553,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           {
             chat_id: chatId,
             message_id: messageId,
-            reply_markup: getAdminEventsKeyboard(events),
+            reply_markup: getAdminEventsKeyboard(events, 0),
           }
         );
       }

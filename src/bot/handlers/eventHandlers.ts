@@ -63,9 +63,9 @@ export function registerEventHandlers(bot: TelegramBot) {
       return;
     }
 
-    // Show a list of the user’s registrations (inline keyboard)
+    // Show a list of the user's registrations with pagination (page 0 = first page)
     bot.sendMessage(chatId, "Your event registrations:", {
-      reply_markup: getUserRegistrationsKeyboard(registrations),
+      reply_markup: getUserRegistrationsKeyboard(registrations, 0),
     });
   });
 
@@ -255,7 +255,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           // reply_markup: getMainMenuKeyboard(false),
         });
 
-        // Send Cancelation message to group
+        // Send Cancellation message to group
         await sendMessageInTopic(
           bot,
           ADMIN_GROUP_ID,
@@ -365,6 +365,23 @@ export function registerEventHandlers(bot: TelegramBot) {
           show_alert: true,
         });
       }
+    }
+    // Handle pagination for registrations list
+    else if (query.data.startsWith("reg_page_")) {
+      const pageNumber = parseInt(query.data.replace("reg_page_", ""), 10);
+      const userId = query.from.id;
+
+      // Get fresh registrations data
+      const registrations = await getUserRegistrations(userId);
+
+      // Update the message with the new page
+      await bot.editMessageCaption("Your event registrations:", {
+        reply_markup: getUserRegistrationsKeyboard(registrations, pageNumber),
+        chat_id: chatId,
+        message_id: messageId,
+      });
+
+      bot.answerCallbackQuery(query.id);
     }
   });
 
