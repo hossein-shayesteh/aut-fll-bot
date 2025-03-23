@@ -456,10 +456,25 @@ export function registerEventHandlers(bot: TelegramBot) {
       case "collect_student_id":
         state.studentId = msg.text;
         state.step = "collect_receipt_image";
-        bot.sendMessage(chatId, "Please upload your *payment receipt image*:", {
-          parse_mode: "Markdown",
-          reply_markup: getCancelKeyboard(),
-        });
+
+        // Get event details to show fee
+        const event = await getEventById(state.eventId);
+        const fee = event ? event.fee : "N/A";
+        const paymentInfo =
+          process.env.PAYMENT_CARD_NUMBER ||
+          "Please contact admin for payment details";
+
+        // Split the payment info to get card number and owner
+        const [cardNumber, cardOwner] = paymentInfo.split(",");
+
+        bot.sendMessage(
+          chatId,
+          `Please pay $${fee} to:\n\n*Card Number:* ${cardNumber}\n*Card Owner:* ${cardOwner}\n\nAfter payment, upload your *payment receipt image*:`,
+          {
+            parse_mode: "Markdown",
+            reply_markup: getCancelKeyboard(),
+          }
+        );
         break;
 
       case "collect_receipt_image":
