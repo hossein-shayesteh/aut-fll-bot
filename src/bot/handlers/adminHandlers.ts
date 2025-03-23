@@ -17,7 +17,7 @@ import {
   getEventRegistrants,
 } from "../../services/eventService";
 import { EventStatus } from "../../database/models/Event";
-import { getUsersByEventId, getAllUsers } from "../../services/userService";
+import { getAllUsers } from "../../services/userService";
 import {
   getAverageEventRating,
   getEventFeedbacks,
@@ -26,7 +26,7 @@ import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
 import { RegistrationStatus } from "../../database/models/Registration";
 
 // User states for multi-step operations
-const userStates: Map<
+export const AdminStates: Map<
   number,
   {
     state: string;
@@ -72,7 +72,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
     if (!userId) return;
 
     checkAdminAccess(bot, msg, () => {
-      userStates.set(userId, { state: "CREATE_EVENT_NAME" });
+      AdminStates.set(userId, { state: "CREATE_EVENT_NAME" });
       bot.sendMessage(
         chatId,
         "Let's create a new event. First, please enter the event name:",
@@ -164,8 +164,8 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
     if (!userId) return;
 
-    if (userStates.has(userId)) {
-      userStates.delete(userId);
+    if (AdminStates.has(userId)) {
+      AdminStates.delete(userId);
       bot.sendMessage(chatId, "Operation cancelled.", {
         reply_markup: getAdminMenuKeyboard(),
       });
@@ -434,7 +434,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
     // Send notification to event participants
     else if (data.startsWith("notify_event_")) {
       const eventId = parseInt(data.split("_")[2]);
-      userStates.set(userId, { state: "SEND_EVENT_NOTIFICATION", eventId });
+      AdminStates.set(userId, { state: "SEND_EVENT_NOTIFICATION", eventId });
 
       bot.sendMessage(
         chatId,
@@ -468,7 +468,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       const attribute = parts[1];
       const eventId = parseInt(parts[2]);
 
-      userStates.set(userId, {
+      AdminStates.set(userId, {
         state: `EDIT_EVENT_${attribute.toUpperCase()}`,
         eventId,
       });
@@ -496,7 +496,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           break;
         case "poster":
           promptMessage += "event poster (please upload an image):";
-          userStates.set(userId, {
+          AdminStates.set(userId, {
             state: "EDIT_EVENT_POSTER_UPLOAD",
             eventId,
           });
@@ -519,7 +519,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       const target = data.split("_")[1];
 
       if (target === "all") {
-        userStates.set(userId, { state: "SEND_ALL_NOTIFICATION" });
+        AdminStates.set(userId, { state: "SEND_ALL_NOTIFICATION" });
         bot.sendMessage(
           chatId,
           "Please enter the message to send to all bot users:",
@@ -557,7 +557,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
     if (!userId || !text || text === "Cancel") return;
 
-    const userState = userStates.get(userId);
+    const userState = AdminStates.get(userId);
     if (!userState) return;
 
     // Create event flow
@@ -694,7 +694,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           );
 
           // TODO: send a notification to a channel about the new event
-          userStates.delete(userId);
+          AdminStates.delete(userId);
         } catch (error) {
           bot.sendMessage(chatId, "Failed to create event. Please try again.", {
             reply_markup: getAdminMenuKeyboard(),
@@ -706,7 +706,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         });
       }
 
-      userStates.delete(userId);
+      AdminStates.delete(userId);
     }
     // Event editing flows
     else if (userState.state.startsWith("EDIT_EVENT_") && userState.eventId) {
@@ -717,7 +717,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         bot.sendMessage(chatId, "Event not found. Operation cancelled.", {
           reply_markup: getAdminMenuKeyboard(),
         });
-        userStates.delete(userId);
+        AdminStates.delete(userId);
         return;
       }
 
@@ -744,7 +744,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
                   reply_markup: getAdminMenuKeyboard(),
                 }
               );
-              userStates.delete(userId);
+              AdminStates.delete(userId);
               return;
             }
             updateData.capacity = capacity;
@@ -759,7 +759,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
                   reply_markup: getAdminMenuKeyboard(),
                 }
               );
-              userStates.delete(userId);
+              AdminStates.delete(userId);
               return;
             }
             updateData.fee = fee;
@@ -774,7 +774,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
                   reply_markup: getAdminMenuKeyboard(),
                 }
               );
-              userStates.delete(userId);
+              AdminStates.delete(userId);
               return;
             }
             updateData.eventDate = eventDate;
@@ -790,7 +790,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           reply_markup: getAdminMenuKeyboard(),
         });
 
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       } catch (error) {
         bot.sendMessage(
           chatId,
@@ -799,7 +799,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             reply_markup: getAdminMenuKeyboard(),
           }
         );
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       }
     }
     // Handle notifications
@@ -826,7 +826,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           }
         );
 
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       } catch (error) {
         bot.sendMessage(
           chatId,
@@ -835,7 +835,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             reply_markup: getAdminMenuKeyboard(),
           }
         );
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       }
     } else if (
       userState.state === "SEND_EVENT_NOTIFICATION" &&
@@ -848,7 +848,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           bot.sendMessage(chatId, "Event not found. Operation cancelled.", {
             reply_markup: getAdminMenuKeyboard(),
           });
-          userStates.delete(userId);
+          AdminStates.delete(userId);
           return;
         }
 
@@ -883,7 +883,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           }
         );
 
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       } catch (error) {
         bot.sendMessage(
           chatId,
@@ -892,7 +892,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             reply_markup: getAdminMenuKeyboard(),
           }
         );
-        userStates.delete(userId);
+        AdminStates.delete(userId);
       }
     }
   });
@@ -904,7 +904,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
     if (!userId) return;
 
-    const userState = userStates.get(userId);
+    const userState = AdminStates.get(userId);
     if (
       !userState ||
       userState.state !== "EDIT_EVENT_POSTER_UPLOAD" ||
@@ -923,7 +923,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             reply_markup: getAdminMenuKeyboard(),
           }
         );
-        userStates.delete(userId);
+        AdminStates.delete(userId);
         return;
       }
 
@@ -934,7 +934,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         reply_markup: getAdminMenuKeyboard(),
       });
 
-      userStates.delete(userId);
+      AdminStates.delete(userId);
     } catch (error) {
       bot.sendMessage(
         chatId,
@@ -943,7 +943,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           reply_markup: getAdminMenuKeyboard(),
         }
       );
-      userStates.delete(userId);
+      AdminStates.delete(userId);
     }
   });
 }

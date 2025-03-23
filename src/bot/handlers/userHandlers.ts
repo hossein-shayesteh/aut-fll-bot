@@ -10,15 +10,19 @@ import {
 } from "../keyboards/userKeyboards";
 import { getActiveEvents } from "../../services/eventService";
 import dotenv from "dotenv";
+import { registrationStates } from "./eventHandlers";
+import { AdminStates } from "./adminHandlers";
 
 dotenv.config();
 
-interface IUserState {
-  state: string;
-  data?: any;
-}
-
-const userStates: Map<number, IUserState> = new Map();
+// Export userStates so it can be accessed from other files
+export const userStates: Map<
+  number,
+  {
+    state: string;
+    data?: any;
+  }
+> = new Map();
 
 export function registerUserHandlers(bot: TelegramBot) {
   // Handle /start command
@@ -29,6 +33,18 @@ export function registerUserHandlers(bot: TelegramBot) {
     const lastName = msg.from?.last_name;
 
     if (!userId) return;
+
+    // Clear any ongoing processes for this user
+    userStates.delete(userId);
+
+    // Also clear any registration states if they exist
+    if (registrationStates) {
+      registrationStates.delete(userId);
+    }
+
+    if (AdminStates) {
+      AdminStates.delete(userId);
+    }
 
     // Create or retrieve user from DB
     await findOrCreateUser(userId, firstName, lastName);

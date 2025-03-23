@@ -35,15 +35,18 @@ dotenv.config();
 const ADMIN_GROUP_ID = Number(process.env.ADMIN_GROUP_ID) || 0;
 
 // For multi-step user registration
-interface IUserRegistrationState {
-  eventId: number;
-  step: string;
-  firstName?: string;
-  lastName?: string;
-  phoneNumber?: string;
-  studentId?: string;
-}
-const registrationStates: Map<number, IUserRegistrationState> = new Map();
+
+export const registrationStates: Map<
+  number,
+  {
+    eventId: number;
+    step: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    studentId?: string;
+  }
+> = new Map();
 
 export function registerEventHandlers(bot: TelegramBot) {
   // Event status
