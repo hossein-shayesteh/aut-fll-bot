@@ -110,6 +110,28 @@ export function registerEventHandlers(bot: TelegramBot) {
       const eventIdStr = query.data.replace("register_", "");
       const eventId = parseInt(eventIdStr, 10);
 
+      // Check if event has capacity before starting registration
+      const isFull = await checkEventCapacity(eventId);
+      if (isFull) {
+        bot.sendMessage(chatId, "Sorry, this event is already full.", {
+          reply_markup: getMainMenuKeyboard(false),
+        });
+        bot.answerCallbackQuery(query.id);
+        return;
+      }
+
+      // Check if user is already registered for this event
+      const existingReg = await getRegistrationByUserAndEvent(userId, eventId);
+      if (existingReg && existingReg.status === RegistrationStatus.APPROVED) {
+        bot.sendMessage(
+          chatId,
+          "You are already registered and approved for this event.",
+          { reply_markup: getMainMenuKeyboard(false) }
+        );
+        bot.answerCallbackQuery(query.id);
+        return;
+      }
+
       // Retrieve user profile
       const userProfile = await getUserProfile(userId);
       if (!userProfile) {
