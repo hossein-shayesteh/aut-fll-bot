@@ -80,10 +80,17 @@ export function registerUserHandlers(bot: TelegramBot) {
       }
 
       // Handle possible user profile updates, etc.
-      if (state === "EDIT_USER_PROFILE_NAME") {
+      if (state === "EDIT_USER_FIRST_NAME") {
         userStates.delete(userId);
         await updateUserProfile(userId, { firstName: msg.text });
-        bot.sendMessage(chatId, "Name updated successfully!", {
+        bot.sendMessage(chatId, "First name updated successfully!", {
+          reply_markup: getMainMenuKeyboard(false),
+        });
+        return;
+      } else if (state === "EDIT_USER_LAST_NAME") {
+        userStates.delete(userId);
+        await updateUserProfile(userId, { lastName: msg.text });
+        bot.sendMessage(chatId, "Last name updated successfully!", {
           reply_markup: getMainMenuKeyboard(false),
         });
         return;
@@ -157,7 +164,8 @@ export function registerUserHandlers(bot: TelegramBot) {
     message += `Student ID: ${profile.studentId ?? ""}\n`;
 
     message += `\nYou can update your info:\n`;
-    message += "• Type /editname to update name\n";
+    message += "• Type /editfirstname to update first name\n";
+    message += "• Type /editlastname to update last name\n";
     message += "• Type /editphone to update phone number\n";
     message += "• Type /editstudentid to update student ID";
 
@@ -183,11 +191,20 @@ export function registerUserHandlers(bot: TelegramBot) {
   });
 
   // Profile edit commands
-  bot.onText(/\/editname/, (msg) => {
+  bot.onText(/\/editfirstname/, (msg) => {
     if (!msg.from?.id) return;
     const chatId = msg.chat.id;
-    userStates.set(msg.from.id, { state: "EDIT_USER_PROFILE_NAME" });
-    bot.sendMessage(chatId, "Please enter your new name:", {
+    userStates.set(msg.from.id, { state: "EDIT_USER_FIRST_NAME" });
+    bot.sendMessage(chatId, "Please enter your new first name:", {
+      reply_markup: getCancelKeyboard(),
+    });
+  });
+
+  bot.onText(/\/editlastname/, (msg) => {
+    if (!msg.from?.id) return;
+    const chatId = msg.chat.id;
+    userStates.set(msg.from.id, { state: "EDIT_USER_LAST_NAME" });
+    bot.sendMessage(chatId, "Please enter your new last name:", {
       reply_markup: getCancelKeyboard(),
     });
   });
