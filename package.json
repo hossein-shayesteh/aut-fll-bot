@@ -13,8 +13,8 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "node-telegram-bot-api": "^0.66.0",
-    "typeorm": "^0.3.21",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "typeorm": "^0.3.21"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

@@ -23,6 +23,7 @@ import {
   getEventFeedbacks,
 } from "../../services/feedbackService";
 import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
+import { RegistrationStatus } from "../../database/models/Registration";
 
 // User states for multi-step operations
 const userStates: Map<
@@ -221,7 +222,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       // Get registrant count
       const registrants = await getEventRegistrants(eventId);
       const approvedCount = registrants.filter(
-        (r) => r.status === "approved"
+        (r) => r.status === RegistrationStatus.APPROVED
       ).length;
       message += `Registrations: ${approvedCount}/${event.capacity}\n`;
 
@@ -354,12 +355,16 @@ export function registerAdminHandlers(bot: TelegramBot) {
         return;
       }
 
-      // Notify all registrants
-      const users = await getUsersByEventId(eventId);
-      for (const user of users) {
+      // Notify only approved registrants
+      const registrants = await getEventRegistrants(eventId);
+      const approvedRegistrants = registrants.filter(
+        (r) => r.status === RegistrationStatus.APPROVED
+      );
+
+      for (const reg of approvedRegistrants) {
         try {
           await bot.sendMessage(
-            user.telegramId,
+            reg.user.telegramId,
             `⚠️ *Event Cancelled* ⚠️\n\nThe event "${
               event.name
             }" scheduled for ${event.eventDate.toLocaleString()} has been cancelled.`,
@@ -369,7 +374,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
       }
 
       bot.editMessageText(
-        `Event "${event.name}" has been cancelled and all registrants have been notified.`,
+        `Event "${event.name}" has been cancelled and all approved registrants have been notified.`,
         {
           chat_id: chatId,
           message_id: messageId,
@@ -837,7 +842,6 @@ export function registerAdminHandlers(bot: TelegramBot) {
       userState.eventId
     ) {
       try {
-        const users = await getUsersByEventId(userState.eventId);
         const event = await getEventById(userState.eventId);
 
         if (!event) {
@@ -848,13 +852,20 @@ export function registerAdminHandlers(bot: TelegramBot) {
           return;
         }
 
+        // Get registrants instead of all users
+        const registrants = await getEventRegistrants(userState.eventId);
+        // Filter only approved registrants
+        const approvedRegistrants = registrants.filter(
+          (r) => r.status === RegistrationStatus.APPROVED
+        );
+
         let successCount = 0;
         let failCount = 0;
 
-        for (const user of users) {
+        for (const reg of approvedRegistrants) {
           try {
             await bot.sendMessage(
-              user.telegramId,
+              reg.user.telegramId,
               `*📢 Notification for event "${event.name}"*\n\n${text}`,
               { parse_mode: "Markdown" }
             );
@@ -866,7 +877,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
         bot.sendMessage(
           chatId,
-          `Notification for event "${event.name}" sent successfully to ${successCount} participants. Failed: ${failCount}`,
+          `Notification for event "${event.name}" sent successfully to ${successCount} approved participants. Failed: ${failCount}`,
           {
             reply_markup: getAdminMenuKeyboard(),
           }
