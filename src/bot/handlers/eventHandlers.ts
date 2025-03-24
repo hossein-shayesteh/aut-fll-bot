@@ -67,7 +67,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     const registrations = await getUserRegistrations(userId);
     if (registrations.length === 0) {
       bot.sendMessage(chatId, "You have not registered for any events.", {
-        reply_markup: getMainMenuKeyboard(false),
+        reply_markup: getMainMenuKeyboard(),
       });
       return;
     }
@@ -137,7 +137,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const hasCapacity = await checkEventCapacity(eventId);
       if (!hasCapacity) {
         bot.sendMessage(chatId, "Sorry, this event is already full.", {
-          reply_markup: getMainMenuKeyboard(false),
+          reply_markup: getMainMenuKeyboard(),
         });
         bot.answerCallbackQuery(query.id);
         return;
@@ -149,7 +149,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.sendMessage(
           chatId,
           "You are already registered and approved for this event.",
-          { reply_markup: getMainMenuKeyboard(false) }
+          { reply_markup: getMainMenuKeyboard() }
         );
         bot.answerCallbackQuery(query.id);
         return;
@@ -272,7 +272,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           message_id: messageId,
           parse_mode: "Markdown",
           // TODO: Fix line below
-          // reply_markup: getMainMenuKeyboard(false),
+          // reply_markup: getMainMenuKeyboard(),
         });
 
         // Send Cancellation message to group
@@ -423,7 +423,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     if (msg.text && msg.text.toLowerCase() === "cancel") {
       registrationStates.delete(userId);
       bot.sendMessage(chatId, "Registration cancelled.", {
-        reply_markup: getMainMenuKeyboard(false),
+        reply_markup: getMainMenuKeyboard(),
       });
       return;
     }
@@ -624,19 +624,19 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.sendMessage(
           chatId,
           "You are already registered and approved for this event.",
-          { reply_markup: getMainMenuKeyboard(false) }
+          { reply_markup: getMainMenuKeyboard() }
         );
       } else if (!isFull) {
         // Probably some other error (e.g., DB error)
         bot.sendMessage(
           chatId,
           "Failed to register. The event may be full or an error occurred.",
-          { reply_markup: getMainMenuKeyboard(false) }
+          { reply_markup: getMainMenuKeyboard() }
         );
       } else {
         // isFull === true => event capacity is reached
         bot.sendMessage(chatId, "Sorry, this event is already full.", {
-          reply_markup: getMainMenuKeyboard(false),
+          reply_markup: getMainMenuKeyboard(),
         });
       }
 
@@ -687,7 +687,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       chatId,
       "Your registration request has been submitted and is awaiting admin approval.",
       {
-        reply_markup: getMainMenuKeyboard(false),
+        reply_markup: getMainMenuKeyboard(),
       }
     );
 

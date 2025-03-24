@@ -5,9 +5,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export function getMainMenuKeyboard(
-  isAdmin: boolean
-): TelegramBot.ReplyKeyboardMarkup {
+export function getMainMenuKeyboard(): TelegramBot.ReplyKeyboardMarkup {
   const keyboard = [
     [{ text: "Register for Events" }, { text: "Event Status" }],
     [{ text: "User Profile" }, { text: "Get Group & Channel Links" }],

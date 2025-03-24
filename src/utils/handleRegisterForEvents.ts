@@ -10,7 +10,7 @@ export const handleRegisterForEvents = async (
 
   if (events.length === 0) {
     bot.sendMessage(chatId, "No upcoming events at the moment.", {
-      reply_markup: getMainMenuKeyboard(false),
+      reply_markup: getMainMenuKeyboard(),
     });
     return;
   }

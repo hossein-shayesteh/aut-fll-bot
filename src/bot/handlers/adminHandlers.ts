@@ -156,7 +156,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
     if (!userId) return;
 
     bot.sendMessage(chatId, "Returning to main menu", {
-      reply_markup: getMainMenuKeyboard(true),
+      reply_markup: getMainMenuKeyboard(),
     });
   });
 
