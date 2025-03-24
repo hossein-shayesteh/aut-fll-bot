@@ -24,7 +24,7 @@ export class Event {
 
   @Column("decimal", { precision: 10, scale: 2 })
   fee!: number;
-  
+
   @Column("decimal", { precision: 10, scale: 2, default: 0 })
   universityFee!: number;
 

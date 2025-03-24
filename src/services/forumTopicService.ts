@@ -10,32 +10,36 @@ export async function findOrCreateForumTopic(
 ): Promise<number> {
   const forumTopicRepo = AppDataSource.getRepository(ForumTopic);
 
-  // 1) Check if we already have a forum topic
-  let existingRecord = await forumTopicRepo.findOne({
-    where: {
+  try {
+    // 1) Check if we already have a forum topic
+    let existingRecord = await forumTopicRepo.findOne({
+      where: {
+        chatId,
+        topicName,
+      },
+    });
+
+    if (existingRecord) {
+      return existingRecord.messageThreadId;
+    }
+
+    // 2) Otherwise, create a new forum topic
+    const forumTopic = (await bot.createForumTopic(
       chatId,
       topicName,
-    },
-  });
+      options
+    )) as any;
+    const messageThreadId = forumTopic.message_thread_id;
 
-  if (existingRecord) {
-    return existingRecord.messageThreadId;
+    // 3) Save the new record in the database
+    const newRecord = new ForumTopic();
+    newRecord.chatId = chatId;
+    newRecord.topicName = topicName;
+    newRecord.messageThreadId = messageThreadId;
+    await forumTopicRepo.save(newRecord);
+
+    return messageThreadId;
+  } catch (error) {
+    throw error;
   }
-
-  // 2) Otherwise, create a new forum topic
-  const forumTopic = (await bot.createForumTopic(
-    chatId,
-    topicName,
-    options
-  )) as any;
-  const messageThreadId = forumTopic.message_thread_id;
-
-  // 3) Save the new record in the database
-  const newRecord = new ForumTopic();
-  newRecord.chatId = chatId;
-  newRecord.topicName = topicName;
-  newRecord.messageThreadId = messageThreadId;
-  await forumTopicRepo.save(newRecord);
-
-  return messageThreadId;
 }

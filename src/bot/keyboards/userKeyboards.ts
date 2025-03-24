@@ -155,20 +155,3 @@ export function getFeedbackRatingKeyboard(
     ],
   };
 }
-
-export function getEventShareKeyboard(
-  eventId: number
-): TelegramBot.InlineKeyboardMarkup {
-  const botId = process.env.BOT_ID;
-
-  return {
-    inline_keyboard: [
-      [
-        {
-          text: "Share This Event",
-          url: `https://t.me/share/url?url=https://t.me/${botId}?start=event_${eventId}`,
-        },
-      ],
-    ],
-  };
-}

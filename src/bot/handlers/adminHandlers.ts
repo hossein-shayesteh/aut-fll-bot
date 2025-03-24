@@ -24,6 +24,9 @@ import {
 } from "../../services/feedbackService";
 import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
 import { RegistrationStatus } from "../../database/models/Registration";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // User states for multi-step operations
 export const AdminStates: Map<
@@ -735,10 +738,11 @@ export function registerAdminHandlers(bot: TelegramBot) {
       if (text.toLowerCase() === "yes") {
         try {
           const event = await createEvent(userState.data);
+          const shareLink = `https://t.me/share/url?url=https://t.me/${process.env.BOT_ID}?start=event_${event.id}`;
 
           bot.sendMessage(
             chatId,
-            `Event "${event.name}" created successfully!`,
+            `Event "${event.name}" created successfully!\n\nShare this event with others:\n\`\`\`${shareLink}\`\`\``,
             {
               reply_markup: getAdminMenuKeyboard(),
             }
