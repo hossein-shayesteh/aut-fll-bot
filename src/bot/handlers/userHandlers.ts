@@ -95,6 +95,15 @@ export function registerUserHandlers(bot: TelegramBot) {
         });
         return;
       } else if (state === "EDIT_USER_PROFILE_PHONE") {
+        // Validate phone number format
+        const phoneRegex = /((09)|(\+?989))\d{2}[-\s]?\d{3}[-\s]?\d{4}/g;
+        if (!phoneRegex.test(msg.text)) {
+          bot.sendMessage(chatId, "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):", {
+            reply_markup: getCancelKeyboard(),
+          });
+          return;
+        }
+        
         userStates.delete(userId);
         await updateUserProfile(userId, { phoneNumber: msg.text });
         bot.sendMessage(chatId, "Phone number updated successfully!", {
@@ -102,6 +111,15 @@ export function registerUserHandlers(bot: TelegramBot) {
         });
         return;
       } else if (state === "EDIT_USER_PROFILE_STUDENTID") {
+        // Validate student ID format
+        const studentIdRegex = /^(?:(?:9[6-9]|40[0-4])(?:(?:2[2-9]|3[0-4]|39|1[0-3])|1(?:2[2-9]|3[0-4]|39|1[0-3])|2(?:2[2-9]|3[0-4]|39|1[0-3]))(?:\d{3}))$/;
+        if (!studentIdRegex.test(msg.text)) {
+          bot.sendMessage(chatId, "Invalid student ID format. Please enter a valid Amirkabir University student ID:", {
+            reply_markup: getCancelKeyboard(),
+          });
+          return;
+        }
+        
         userStates.delete(userId);
         await updateUserProfile(userId, { studentId: msg.text });
         bot.sendMessage(chatId, "Student ID updated successfully!", {

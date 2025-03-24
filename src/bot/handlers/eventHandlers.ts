@@ -479,6 +479,27 @@ export function registerEventHandlers(bot: TelegramBot) {
         break;
 
       case "collect_phone_number":
+        // Make sure msg.text is defined
+        if (!msg.text) {
+          bot.sendMessage(chatId, "Please enter a valid phone number:", {
+            reply_markup: getCancelKeyboard(),
+          });
+          return;
+        }
+
+        // Validate phone number format
+        const phoneRegex = /((09)|(\+?989))\d{2}[-\s]?\d{3}[-\s]?\d{4}/g;
+        if (!phoneRegex.test(msg.text)) {
+          bot.sendMessage(
+            chatId,
+            "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):",
+            {
+              reply_markup: getCancelKeyboard(),
+            }
+          );
+          return;
+        }
+
         state.phoneNumber = msg.text;
         state.step = "collect_student_id";
         bot.sendMessage(
@@ -492,6 +513,34 @@ export function registerEventHandlers(bot: TelegramBot) {
         break;
 
       case "collect_student_id":
+        // Make sure msg.text is defined
+        if (!msg.text) {
+          bot.sendMessage(
+            chatId,
+            "Please enter your student ID or '0' if you're not a student:",
+            {
+              reply_markup: getCancelKeyboard(),
+            }
+          );
+          return;
+        }
+
+        // Validate student ID format if not "0"
+        if (msg.text !== "0") {
+          const studentIdRegex =
+            /^(?:(?:9[6-9]|40[0-4])(?:(?:2[2-9]|3[0-4]|39|1[0-3])|1(?:2[2-9]|3[0-4]|39|1[0-3])|2(?:2[2-9]|3[0-4]|39|1[0-3]))(?:\d{3}))$/;
+          if (!studentIdRegex.test(msg.text)) {
+            bot.sendMessage(
+              chatId,
+              "Invalid student ID format. Please enter a valid Amirkabir University student ID or '0' if you're not a student:",
+              {
+                reply_markup: getCancelKeyboard(),
+              }
+            );
+            return;
+          }
+        }
+
         state.studentId = msg.text;
         state.step = "collect_receipt_image";
 
