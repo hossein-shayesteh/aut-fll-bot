@@ -228,7 +228,10 @@ export function registerAdminHandlers(bot: TelegramBot) {
       message += `Description: ${event.description || "N/A"}\n`;
       message += `Date: ${event.eventDate.toLocaleString()}\n`;
       message += `Location: ${event.location || "N/A"}\n`;
-      message += `Fee: $${event.fee}\n`;
+      message += `Regular Fee: $${event.fee}\n`;
+      message += `University Student Fee: $${
+        event.universityFee || event.fee
+      }\n`;
       message += `Capacity: ${event.capacity}\n`;
       message += `Status: ${eventStatusIcon} ${event.status}\n`;
 
@@ -499,7 +502,10 @@ export function registerAdminHandlers(bot: TelegramBot) {
           promptMessage += "event capacity (number):";
           break;
         case "fee":
-          promptMessage += "event fee (number):";
+          promptMessage += "regular event fee (number):";
+          break;
+        case "universityfee":
+          promptMessage += "university student fee (number):";
           break;
         case "date":
           promptMessage += "event date and time (YYYY-MM-DD HH:MM):";
@@ -621,16 +627,50 @@ export function registerAdminHandlers(bot: TelegramBot) {
       const fee = parseFloat(text);
 
       if (isNaN(fee) || fee < 0) {
-        bot.sendMessage(chatId, "Please enter a valid number for the fee:", {
-          reply_markup: {
-            keyboard: [[{ text: "Cancel" }]],
-            resize_keyboard: true,
-          },
-        });
+        bot.sendMessage(
+          chatId,
+          "Please enter a valid number for the regular fee:",
+          {
+            reply_markup: {
+              keyboard: [[{ text: "Cancel" }]],
+              resize_keyboard: true,
+            },
+          }
+        );
         return;
       }
 
       userState.data.fee = fee;
+      userState.state = "CREATE_EVENT_UNIVERSITY_FEE";
+
+      bot.sendMessage(
+        chatId,
+        "Enter the event fee for university students (with student ID):",
+        {
+          reply_markup: {
+            keyboard: [[{ text: "Cancel" }]],
+            resize_keyboard: true,
+          },
+        }
+      );
+    } else if (userState.state === "CREATE_EVENT_UNIVERSITY_FEE") {
+      const universityFee = parseFloat(text);
+
+      if (isNaN(universityFee) || universityFee < 0) {
+        bot.sendMessage(
+          chatId,
+          "Please enter a valid number for the university student fee:",
+          {
+            reply_markup: {
+              keyboard: [[{ text: "Cancel" }]],
+              resize_keyboard: true,
+            },
+          }
+        );
+        return;
+      }
+
+      userState.data.universityFee = universityFee;
       userState.state = "CREATE_EVENT_DATE";
 
       bot.sendMessage(
@@ -677,7 +717,8 @@ export function registerAdminHandlers(bot: TelegramBot) {
       message += `Name: ${userState.data.name}\n`;
       message += `Description: ${userState.data.description}\n`;
       message += `Capacity: ${userState.data.capacity}\n`;
-      message += `Fee: $${userState.data.fee}\n`;
+      message += `Regular Fee: $${userState.data.fee}\n`;
+      message += `University Student Fee: $${userState.data.universityFee}\n`;
       message += `Date: ${userState.data.eventDate.toLocaleString()}\n`;
       message += `Location: ${userState.data.location}\n\n`;
       message +=
@@ -773,6 +814,21 @@ export function registerAdminHandlers(bot: TelegramBot) {
               return;
             }
             updateData.fee = fee;
+            break;
+          case "universityfee":
+            const universityFee = parseFloat(text);
+            if (isNaN(universityFee) || universityFee < 0) {
+              bot.sendMessage(
+                chatId,
+                "Please enter a valid number for university fee. Operation cancelled.",
+                {
+                  reply_markup: getAdminMenuKeyboard(),
+                }
+              );
+              AdminStates.delete(userId);
+              return;
+            }
+            updateData.universityFee = universityFee;
             break;
           case "date":
             const eventDate = new Date(text);

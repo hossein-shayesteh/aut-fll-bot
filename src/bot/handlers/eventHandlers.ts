@@ -79,6 +79,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     if (!chatId || !messageId) return;
 
     // 1. View event details
+    // 1. Update the view_event_ callback query handler to show appropriate fee
     if (query.data.startsWith("view_event_")) {
       const eventIdStr = query.data.replace("view_event_", "");
       const eventId = parseInt(eventIdStr, 10);
@@ -89,13 +90,23 @@ export function registerEventHandlers(bot: TelegramBot) {
         return;
       }
 
+      // Get user profile to determine which fee to show
+      const userProfile = await getUserProfile(userId);
+      const hasValidStudentId =
+        userProfile?.studentId && userProfile.studentId !== "0";
+
+      // Determine which fee to display
+      const applicableFee = hasValidStudentId
+        ? event.universityFee || event.fee
+        : event.fee;
+
       // Show event details
       let textMessage = `*Event Details*\n\n`;
       textMessage += `Name: ${event.name}\n`;
       textMessage += `Description: ${event.description}\n`;
       textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
       textMessage += `Location: ${event.location ?? "N/A"}\n`;
-      textMessage += `Fee: $${event.fee}\n`;
+      textMessage += `Fee: $${applicableFee}\n`;
       textMessage += `Capacity: ${event.capacity}\n`;
       textMessage += `Status: ${event.status}\n`;
 
@@ -267,7 +278,9 @@ export function registerEventHandlers(bot: TelegramBot) {
           }\nStudent ID: ${registration.user.studentId ?? "N/A"}\n\nEvent: "${
             registration.event.name
           }"\nFee: $${
-            registration.event.fee
+            registration.user.studentId && registration.user.studentId !== "0"
+              ? registration.event.universityFee || registration.event.fee
+              : registration.event.fee
           }\n\nPlease process a refund if applicable.`,
           {
             parse_mode: "Markdown",
@@ -470,7 +483,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         state.step = "collect_student_id";
         bot.sendMessage(
           chatId,
-          "Please enter your *Student ID* (if relevant):",
+          "Please enter your *Student ID* if you are a university student, or enter *0* if you are not:",
           {
             parse_mode: "Markdown",
             reply_markup: getCancelKeyboard(),
@@ -576,7 +589,22 @@ export function registerEventHandlers(bot: TelegramBot) {
 
     const event = await getEventById(registration.eventId);
     // 3) Forward the receipt image + info to admin group for approval
-    const caption = `*New Registration*\n\nName: ${state.firstName} ${state.lastName}\nPhone: ${state.phoneNumber}\nStudent ID: ${state.studentId}\n`;
+    // Get user profile to determine which fee to show
+    const userProfile = await getUserProfile(userId);
+    const hasValidStudentId =
+      userProfile?.studentId && userProfile.studentId !== "0";
+    // Determine which fee to display
+    const applicableFee = hasValidStudentId
+      ? event?.universityFee || event?.fee
+      : event?.fee;
+
+    const caption = `*New Registration*\n\nName: ${state.firstName} ${
+      state.lastName
+    }\nPhone: ${state.phoneNumber}\nStudent ID: ${
+      state.studentId || "None"
+    }\nFee Type: ${
+      hasValidStudentId ? "University Student" : "Regular"
+    }\nFee Amount: $${applicableFee}\n`;
 
     const adminGroupMessage = await sendPhotoInTopic(
       bot,
