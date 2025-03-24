@@ -1,4 +1,4 @@
-import { MoreThan } from "typeorm";
+import { MoreThan, LessThan } from "typeorm";
 import { AppDataSource } from "../database";
 import { Event, EventStatus } from "../database/models/Event";
 import {
@@ -116,4 +116,25 @@ export async function getEventRegistrants(
     relations: ["user"],
     order: { registrationDate: "DESC" },
   });
+}
+
+export async function updateCompletedEvents(): Promise<void> {
+  const now = new Date();
+  // Calculate the time 2 hours ago
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
+  // Find events that have ended (event date is more than 2 hours ago)
+  // and are still marked as ACTIVE or FULL
+  const eventsToComplete = await eventRepository.find({
+    where: [
+      { eventDate: LessThan(twoHoursAgo), status: EventStatus.ACTIVE },
+      { eventDate: LessThan(twoHoursAgo), status: EventStatus.FULL },
+    ],
+  });
+
+  // Update each event's status to COMPLETED
+  for (const event of eventsToComplete) {
+    event.status = EventStatus.COMPLETED;
+    await eventRepository.save(event);
+  }
 }

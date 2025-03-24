@@ -8,7 +8,11 @@ import {
   updateRegistration,
   getRegistrationByUserAndEvent,
 } from "../../services/registrationService";
-import { checkEventCapacity, getEventById } from "../../services/eventService";
+import {
+  checkEventCapacity,
+  getEventById,
+  updateCompletedEvents,
+} from "../../services/eventService";
 import {
   getEventDetailsKeyboard,
   getMainMenuKeyboard,
@@ -22,7 +26,6 @@ import {
   getUserProfile,
   updateUserProfile,
 } from "../../services/userService";
-
 import dotenv from "dotenv";
 import { handleRegisterForEvents } from "../../utils/handleRegisterForEvents";
 import { RegistrationStatus } from "../../database/models/Registration";
@@ -49,6 +52,12 @@ export const registrationStates: Map<
 > = new Map();
 
 export function registerEventHandlers(bot: TelegramBot) {
+  // Run the update function when the bot starts
+  updateCompletedEvents();
+
+  // Set up an interval to check for completed events every hour
+  setInterval(updateCompletedEvents, 60 * 60 * 1000);
+
   // Event status
   bot.on("user_view_event_status", async (msg) => {
     const chatId = msg.chat.id;
