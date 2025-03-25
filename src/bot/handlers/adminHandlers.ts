@@ -738,11 +738,11 @@ export function registerAdminHandlers(bot: TelegramBot) {
       if (text.toLowerCase() === "yes") {
         try {
           const event = await createEvent(userState.data);
-          const shareLink = `https://t.me/share/url?url=https://t.me/${process.env.BOT_ID}?start=event_${event.id}`;
+          const directLink = `https://t.me/${process.env.BOT_ID}?start=event_${event.id}`;
 
           bot.sendMessage(
             chatId,
-            `Event "${event.name}" created successfully!\n\nShare this event with others:\n\`\`\`${shareLink}\`\`\``,
+            `Event "${event.name}" created successfully!\n\nUse this link in channels or groups to let users register directly:\n\`\`\`${directLink}\`\`\``,
             {
               reply_markup: getAdminMenuKeyboard(),
             }

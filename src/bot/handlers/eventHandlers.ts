@@ -241,8 +241,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         message_id: messageId,
         parse_mode: "Markdown",
         reply_markup:
-          registration.status === "approved" ||
-          registration.status === "pending"
+          registration.status === "approved"
             ? getRegistrationDetailsKeyboard(registration)
             : undefined,
       });
