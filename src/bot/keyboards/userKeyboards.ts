@@ -189,10 +189,10 @@ export function getFeedbackRatingKeyboard(
     inline_keyboard: [
       [
         { text: "1 ⭐", callback_data: `rate_${eventId}_1` },
-        { text: "2 ⭐⭐", callback_data: `rate_${eventId}_2` },
-        { text: "3 ⭐⭐⭐", callback_data: `rate_${eventId}_3` },
-        { text: "4 ⭐⭐⭐⭐", callback_data: `rate_${eventId}_4` },
-        { text: "5 ⭐⭐⭐⭐⭐", callback_data: `rate_${eventId}_5` },
+        { text: "2 ⭐", callback_data: `rate_${eventId}_2` },
+        { text: "3 ⭐", callback_data: `rate_${eventId}_3` },
+        { text: "4 ⭐", callback_data: `rate_${eventId}_4` },
+        { text: "5 ⭐", callback_data: `rate_${eventId}_5` },
       ],
     ],
   };

@@ -42,6 +42,7 @@ import { handleRegistrationResponse } from "../../utils/eventHandlers/handleRegi
 import { moveToNextRegistrationStep } from "../../utils/eventHandlers/moveToNextRegistrationStep";
 import { validateAndUpdateField } from "../../utils/eventHandlers/validateAndUpdateField";
 import { EventStatus } from "../../database/models/Event";
+import { escapeMarkdown } from "../../utils/escapeMarkdown";
 
 dotenv.config();
 
@@ -63,10 +64,10 @@ export const registrationStates: Map<
 
 export function registerEventHandlers(bot: TelegramBot) {
   // Run the update function when the bot starts
-  // updateCompletedEvents();
+  updateCompletedEvents();
 
   // Set up an interval to check for completed events every hour
-  // setInterval(updateCompletedEvents, 60 * 60 * 1000);
+  setInterval(updateCompletedEvents, 60 * 60 * 1000);
 
   // Event status
   bot.on("user_view_event_status", async (msg) => {
@@ -115,8 +116,8 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       // Show event details
       let textMessage = `*Event Details*\n\n`;
-      textMessage += `Name: ${event.name}\n`;
-      textMessage += `Description: ${event.description}\n`;
+      textMessage += `Name: ${escapeMarkdown(event.name)}\n`;
+      textMessage += `Description: ${escapeMarkdown(event.description)}\n`;
       textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
       textMessage += `Location: ${event.location ?? "N/A"}\n`;
       if (userProfile?.studentId) textMessage += `Fee: $${applicableFee}\n`;
@@ -240,7 +241,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       }
 
       let message = `*Registration Details*\n\n`;
-      message += `Event: ${registration.event.name}\n`;
+      message += `Event: ${escapeMarkdown(registration.event.name)}\n`;
       message += `Status: ${registration.status}\n`;
       message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
 
@@ -282,7 +283,9 @@ export function registerEventHandlers(bot: TelegramBot) {
 
         let message = `You have already rated this event ${stars} (${existingFeedback.rating}/5)`;
         if (existingFeedback.comment)
-          message += `\n\nYour comment: "${existingFeedback.comment}"`;
+          message += `\n\nYour comment: "${escapeMarkdown(
+            existingFeedback.comment
+          )}"`;
         message += "\n\nWould you like to change your feedback?";
 
         bot.editMessageText(message, {
@@ -387,12 +390,14 @@ export function registerEventHandlers(bot: TelegramBot) {
           ADMIN_GROUP_ID,
           "Registration Cancellations",
           `❌ *Registration Cancelled*\n\nName: ${
-            registration.user.firstName ?? "N/A"
-          } ${registration.user.lastName ?? ""}\nPhone: ${
+            escapeMarkdown(registration.user.firstName) ?? "N/A"
+          } ${escapeMarkdown(registration.user.lastName) ?? ""}\nPhone: ${
             registration.user.phoneNumber ?? "N/A"
-          }\nStudent ID: ${registration.user.studentId ?? "N/A"}\n\nEvent: "${
+          }\nStudent ID: ${
+            registration.user.studentId ?? "N/A"
+          }\n\nEvent: "${escapeMarkdown(
             registration.event.name
-          }"\nFee: $${applicableFee}\n\nPlease process a refund if applicable.`,
+          )}"\nFee: $${applicableFee}\n\nPlease process a refund if applicable.`,
           {
             parse_mode: "Markdown",
           }

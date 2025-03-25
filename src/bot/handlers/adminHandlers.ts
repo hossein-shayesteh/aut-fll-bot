@@ -25,6 +25,7 @@ import {
 import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
 import { RegistrationStatus } from "../../database/models/Registration";
 import dotenv from "dotenv";
+import { escapeMarkdown } from "../../utils/escapeMarkdown";
 
 dotenv.config();
 
@@ -227,8 +228,8 @@ export function registerAdminHandlers(bot: TelegramBot) {
       }
 
       let message = `*Event Details*\n\n`;
-      message += `Name: ${event.name}\n`;
-      message += `Description: ${event.description || "N/A"}\n`;
+      message += `Name: ${escapeMarkdown(event.name)}\n`;
+      message += `Description: ${escapeMarkdown(event.description) || "N/A"}\n`;
       message += `Date: ${event.eventDate.toLocaleString()}\n`;
       message += `Location: ${event.location || "N/A"}\n`;
       message += `Regular Fee: $${event.fee}\n`;
@@ -298,7 +299,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
               break;
           }
 
-          message += `${statusIcon} *${user.firstName} ${
+          message += `${statusIcon} *${escapeMarkdown(user.firstName)} ${
             user.lastName || ""
           }*\n`;
           message += `   Status: ${reg.status}\n`;
@@ -413,9 +414,9 @@ export function registerAdminHandlers(bot: TelegramBot) {
         try {
           await bot.sendMessage(
             reg.user.telegramId,
-            `⚠️ *Event Cancelled* ⚠️\n\nThe event "${
+            `⚠️ *Event Cancelled* ⚠️\n\nThe event "${escapeMarkdown(
               updatedEvent.name
-            }" scheduled for ${updatedEvent.eventDate.toLocaleString()} has been cancelled.`,
+            )}" scheduled for ${updatedEvent.eventDate.toLocaleString()} has been cancelled.`,
             { parse_mode: "Markdown" }
           );
         } catch (error) {}
@@ -446,26 +447,28 @@ export function registerAdminHandlers(bot: TelegramBot) {
           reply_markup: getAdminEventActionsKeyboard(eventId),
         });
       } else {
-        let message = `*Event Feedback*\n\n`;
+        let message = "*Event Feedback*\n";
+
         message += `Average Rating: ${
-          avgRating ? avgRating.toFixed(1) + "⭐" : "N/A"
+          avgRating ? `${avgRating.toFixed(1)}⭐` : "N/A"
         }\n\n`;
 
-        for (let i = 0; i < Math.min(feedbacks.length, 10); i++) {
-          const feedback = feedbacks[i];
-          message += `*User:* ${feedback.user.firstName} ${
-            feedback.user.lastName || ""
-          }\n`;
-          message += `*Rating:* ${"⭐".repeat(feedback.rating)}\n`;
-          if (feedback.comment) {
-            message += `*Comment:* ${feedback.comment}\n`;
-          }
+        // Limit how many feedback items to display (for example, 10)
+        const limit = 10;
+        const displayedCount = Math.min(feedbacks.length, limit);
+
+        for (let i = 0; i < displayedCount; i++) {
+          const { user, rating, comment } = feedbacks[i];
+
+          message += `*User:* ${user?.firstName} ${user?.lastName}\n`;
+          message += `*Rating:* ${"⭐".repeat(rating)}\n`;
+          if (comment) message += `*Comment:* ${escapeMarkdown(comment)}\n`;
           message += "\n";
         }
 
-        if (feedbacks.length > 10) {
+        if (feedbacks.length > limit) {
           message += `... and ${
-            feedbacks.length - 10
+            feedbacks.length - limit
           } more feedback submissions.`;
         }
 
@@ -746,8 +749,8 @@ export function registerAdminHandlers(bot: TelegramBot) {
       userState.state = "CREATE_EVENT_CONFIRM";
 
       let message = "*Please confirm the event details:*\n\n";
-      message += `Name: ${userState.data.name}\n`;
-      message += `Description: ${userState.data.description}\n`;
+      message += `Name: ${escapeMarkdown(userState.data.name)}\n`;
+      message += `Description: ${escapeMarkdown(userState.data.description)}\n`;
       message += `Capacity: ${userState.data.capacity}\n`;
       message += `Regular Fee: $${userState.data.fee}\n`;
       message += `University Student Fee: $${userState.data.universityFee}\n`;
@@ -963,7 +966,9 @@ export function registerAdminHandlers(bot: TelegramBot) {
           try {
             await bot.sendMessage(
               reg.user.telegramId,
-              `*📢 Notification for event "${event.name}"*\n\n${text}`,
+              `*📢 Notification for event "${escapeMarkdown(
+                event.name
+              )}"*\n\n${text}`,
               { parse_mode: "Markdown" }
             );
             successCount++;
