@@ -362,12 +362,40 @@ export function registerAdminHandlers(bot: TelegramBot) {
       bot.answerCallbackQuery(query.id);
     }
     // Confirm cancel event
+    // Confirm cancel event
     else if (data.startsWith("confirm_cancel_event_")) {
-      // TODO: Only allow uncomplete event to be cancel
       const eventId = parseInt(data.split("_")[3]);
-      const event = await updateEventStatus(eventId, EventStatus.CANCELLED);
+
+      // Get the event to check its status
+      const event = await getEventById(eventId);
 
       if (!event) {
+        bot.answerCallbackQuery(query.id, {
+          text: "Event not found",
+          show_alert: true,
+        });
+        return;
+      }
+
+      // Only allow cancellation of ACTIVE or FULL events
+      if (
+        event.status !== EventStatus.ACTIVE &&
+        event.status !== EventStatus.FULL
+      ) {
+        bot.answerCallbackQuery(query.id, {
+          text: `Cannot cancel event with status: ${event.status}. Only ACTIVE or FULL events can be cancelled.`,
+          show_alert: true,
+        });
+        return;
+      }
+
+      // Update the event status to CANCELLED
+      const updatedEvent = await updateEventStatus(
+        eventId,
+        EventStatus.CANCELLED
+      );
+
+      if (!updatedEvent) {
         bot.answerCallbackQuery(query.id, {
           text: "Failed to cancel event",
           show_alert: true,
@@ -386,15 +414,15 @@ export function registerAdminHandlers(bot: TelegramBot) {
           await bot.sendMessage(
             reg.user.telegramId,
             `⚠️ *Event Cancelled* ⚠️\n\nThe event "${
-              event.name
-            }" scheduled for ${event.eventDate.toLocaleString()} has been cancelled.`,
+              updatedEvent.name
+            }" scheduled for ${updatedEvent.eventDate.toLocaleString()} has been cancelled.`,
             { parse_mode: "Markdown" }
           );
         } catch (error) {}
       }
 
       bot.editMessageText(
-        `Event "${event.name}" has been cancelled and all approved registrants have been notified.`,
+        `Event "${updatedEvent.name}" has been cancelled and all approved registrants have been notified.`,
         {
           chat_id: chatId,
           message_id: messageId,
