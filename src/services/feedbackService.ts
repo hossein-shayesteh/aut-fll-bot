@@ -38,6 +38,28 @@ export async function createFeedback(
   return await feedbackRepository.save(feedback);
 }
 
+export async function updateFeedbackComment(
+  userTelegramId: number,
+  eventId: number,
+  comment: string
+): Promise<Feedback | null> {
+  // Find existing feedback
+  const existingFeedback = await feedbackRepository.findOne({
+    where: {
+      userTelegramId,
+      eventId,
+    },
+  });
+
+  if (!existingFeedback) {
+    return null;
+  }
+
+  // Update only the comment
+  existingFeedback.comment = comment;
+  return await feedbackRepository.save(existingFeedback);
+}
+
 export async function getEventFeedbacks(eventId: number): Promise<Feedback[]> {
   return feedbackRepository.find({
     where: { eventId },
@@ -56,4 +78,16 @@ export async function getAverageEventRating(
     .getRawOne();
 
   return result?.average || null;
+}
+
+export async function getFeedbackByUserAndEvent(
+  userTelegramId: number,
+  eventId: number
+): Promise<Feedback | null> {
+  return feedbackRepository.findOne({
+    where: {
+      userTelegramId,
+      eventId,
+    },
+  });
 }

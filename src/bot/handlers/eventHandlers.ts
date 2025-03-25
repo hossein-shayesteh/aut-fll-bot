@@ -20,8 +20,17 @@ import {
   getRegistrationDetailsKeyboard,
   getCancelKeyboard,
   getRegistrationApprovalKeyboard,
+  getFeedbackRatingKeyboard,
+  getFeedbackSubmissionKeyboard,
+  getAddCommentKeyboard,
+  getChangeFeedbackKeyboard,
 } from "../keyboards/userKeyboards";
 import { getUserProfile, updateUserProfile } from "../../services/userService";
+import {
+  createFeedback,
+  getFeedbackByUserAndEvent,
+  updateFeedbackComment,
+} from "../../services/feedbackService";
 import dotenv from "dotenv";
 import { RegistrationStatus } from "../../database/models/Registration";
 import { sendMessageInTopic } from "../../utils/eventHandlers/sendMessageInTopic";
@@ -32,6 +41,7 @@ import { getPaymentInstructions } from "../../utils/eventHandlers/getPaymentInst
 import { handleRegistrationResponse } from "../../utils/eventHandlers/handleRegistrationResponse";
 import { moveToNextRegistrationStep } from "../../utils/eventHandlers/moveToNextRegistrationStep";
 import { validateAndUpdateField } from "../../utils/eventHandlers/validateAndUpdateField";
+import { EventStatus } from "../../database/models/Event";
 
 dotenv.config();
 
@@ -234,15 +244,113 @@ export function registerEventHandlers(bot: TelegramBot) {
       message += `Status: ${registration.status}\n`;
       message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
 
+      const isEventCompleted =
+        registration.event.status === EventStatus.COMPLETED;
+      const isRegistrationApproved =
+        registration.status === RegistrationStatus.APPROVED;
+
+      let replyMarkup;
+      if (isRegistrationApproved) {
+        if (isEventCompleted) {
+          // For completed events, show feedback options
+          replyMarkup = getFeedbackSubmissionKeyboard(registration);
+        } else {
+          // For upcoming events, show only cancel option
+          replyMarkup = getRegistrationDetailsKeyboard(registration);
+        }
+      }
+
       bot.editMessageText(message, {
         chat_id: chatId,
         message_id: messageId,
         parse_mode: "Markdown",
-        reply_markup:
-          registration.status === "approved"
-            ? getRegistrationDetailsKeyboard(registration)
-            : undefined,
+        reply_markup: replyMarkup,
       });
+
+      bot.answerCallbackQuery(query.id);
+    }
+    // Handle feedback button click
+    else if (query.data.startsWith("feedback_")) {
+      const eventId = parseInt(query.data.replace("feedback_", ""), 10);
+
+      // Check if user has already submitted feedback for this event
+      const existingFeedback = await getFeedbackByUserAndEvent(userId, eventId);
+
+      if (existingFeedback) {
+        // User has already submitted feedback, show it and ask if they want to change
+        const stars = "⭐".repeat(existingFeedback.rating);
+
+        let message = `You have already rated this event ${stars} (${existingFeedback.rating}/5)`;
+        if (existingFeedback.comment)
+          message += `\n\nYour comment: "${existingFeedback.comment}"`;
+        message += "\n\nWould you like to change your feedback?";
+
+        bot.editMessageText(message, {
+          chat_id: chatId,
+          message_id: messageId,
+          parse_mode: "Markdown",
+          reply_markup: getChangeFeedbackKeyboard(eventId),
+        });
+      } else {
+        // User hasn't submitted feedback yet, show rating options
+        bot.editMessageText("Please rate your experience for this event:", {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getFeedbackRatingKeyboard(eventId),
+        });
+      }
+
+      bot.answerCallbackQuery(query.id);
+    }
+    // Handle request to change rating
+    else if (query.data.startsWith("change_rating_")) {
+      const eventId = parseInt(query.data.replace("change_rating_", ""), 10);
+
+      bot.editMessageText("Please select your new rating for this event:", {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: getFeedbackRatingKeyboard(eventId),
+      });
+
+      bot.answerCallbackQuery(query.id);
+    }
+    // Handle rating selection
+    else if (query.data.startsWith("rate_")) {
+      const parts = query.data.split("_");
+      const eventId = parseInt(parts[1], 10);
+      const rating = parseInt(parts[2], 10);
+
+      // Save the rating
+      await createFeedback(userId, eventId, rating);
+
+      // Ask for optional comment
+      bot.editMessageText(
+        `Thank you for your ${rating}-star rating! Would you like to add a comment?`,
+        {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getAddCommentKeyboard(eventId),
+        }
+      );
+
+      bot.answerCallbackQuery(query.id);
+    }
+    // Handle comment request
+    else if (query.data.startsWith("comment_")) {
+      const eventId = parseInt(query.data.replace("comment_", ""), 10);
+
+      // Store state for collecting comment
+      registrationStates.set(userId, {
+        eventId,
+        step: "collect_feedback_comment",
+      });
+
+      bot.sendMessage(chatId, "Please type your feedback comment:", {
+        reply_markup: getCancelKeyboard(),
+      });
+
+      // Delete the previous message to avoid confusion
+      bot.deleteMessage(chatId, messageId);
 
       bot.answerCallbackQuery(query.id);
     }
@@ -340,7 +448,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     const userId = msg.from?.id;
     if (!userId) return;
 
-    // If we’re not in the middle of the registration flow, skip
+    // If we're not in the middle of the registration flow, skip
     if (!registrationStates.has(userId)) return;
 
     const state = registrationStates.get(userId)!;
@@ -460,6 +568,28 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       case "collect_receipt_image":
         // The next message from the user should be a photo; so we handle in `on("photo", ...)` below
+        break;
+
+      case "collect_feedback_comment":
+        if (!msg.text) {
+          bot.sendMessage(chatId, "Please enter a text comment:", {
+            reply_markup: getCancelKeyboard(),
+          });
+          return;
+        }
+
+        // Save the comment to the database using the new helper function
+        await updateFeedbackComment(userId, state.eventId, msg.text);
+
+        bot.sendMessage(
+          chatId,
+          "Thank you for your feedback! Your comment has been recorded.",
+          {
+            reply_markup: getMainMenuKeyboard(),
+          }
+        );
+
+        registrationStates.delete(userId);
         break;
     }
   });

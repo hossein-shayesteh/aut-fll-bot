@@ -138,6 +138,50 @@ export function getRegistrationDetailsKeyboard(
   };
 }
 
+export function getFeedbackSubmissionKeyboard(
+  registration: Registration
+): TelegramBot.InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "Submit Feedback",
+          callback_data: `feedback_${registration.event.id}`,
+        },
+      ],
+    ],
+  };
+}
+
+export function getAddCommentKeyboard(
+  eventId: number
+): TelegramBot.InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Add Comment", callback_data: `comment_${eventId}` },
+        { text: "No, Thanks", callback_data: "back_to_events" },
+      ],
+    ],
+  };
+}
+
+export function getChangeFeedbackKeyboard(
+  eventId: number
+): TelegramBot.InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "Yes, change my rating",
+          callback_data: `change_rating_${eventId}`,
+        },
+        { text: "No, keep it", callback_data: "back_to_events" },
+      ],
+    ],
+  };
+}
+
 export function getFeedbackRatingKeyboard(
   eventId: number
 ): TelegramBot.InlineKeyboardMarkup {
