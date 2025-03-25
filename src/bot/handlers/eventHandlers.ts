@@ -27,10 +27,12 @@ import {
   updateUserProfile,
 } from "../../services/userService";
 import dotenv from "dotenv";
-import { handleRegisterForEvents } from "../../utils/handleRegisterForEvents";
+
 import { RegistrationStatus } from "../../database/models/Registration";
 import { sendMessageInTopic } from "../../utils/sendMessageInTopic";
 import { sendPhotoInTopic } from "../../utils/sendPhotoInTopic";
+import { getApplicableFee } from "../../utils/getApplicableFee";
+import { handleRegisterForEvents } from "../../utils/userHandlers/handleRegisterForEvents";
 
 dotenv.config();
 
@@ -99,15 +101,8 @@ export function registerEventHandlers(bot: TelegramBot) {
         return;
       }
 
-      // Get user profile to determine which fee to show
-      const userProfile = await getUserProfile(userId);
-      const hasValidStudentId =
-        userProfile?.studentId && userProfile.studentId !== "0";
-
       // Determine which fee to display
-      const applicableFee = hasValidStudentId
-        ? event.universityFee || event.fee
-        : event.fee;
+      const applicableFee = getApplicableFee(eventId, userId);
 
       // Show event details
       let textMessage = `*Event Details*\n\n`;
@@ -222,7 +217,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       // from userHandlers. Let’s do it here for simplicity:
       bot.deleteMessage(chatId, messageId);
 
-      await handleRegisterForEvents(bot, chatId);
+      await handleRegisterForEvents(bot, query?.message);
 
       bot.answerCallbackQuery(query.id);
     }
@@ -275,6 +270,11 @@ export function registerEventHandlers(bot: TelegramBot) {
           // reply_markup: getMainMenuKeyboard(),
         });
 
+        const applicableFee = getApplicableFee(
+          registration.event.id,
+          registration.user.telegramId
+        );
+
         // Send Cancellation message to group
         await sendMessageInTopic(
           bot,
@@ -286,11 +286,7 @@ export function registerEventHandlers(bot: TelegramBot) {
             registration.user.phoneNumber ?? "N/A"
           }\nStudent ID: ${registration.user.studentId ?? "N/A"}\n\nEvent: "${
             registration.event.name
-          }"\nFee: $${
-            registration.user.studentId && registration.user.studentId !== "0"
-              ? registration.event.universityFee || registration.event.fee
-              : registration.event.fee
-          }\n\nPlease process a refund if applicable.`,
+          }"\nFee: $${applicableFee}\n\nPlease process a refund if applicable.`,
           {
             parse_mode: "Markdown",
           }
@@ -436,9 +432,9 @@ export function registerEventHandlers(bot: TelegramBot) {
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
 
-          // Get event details to show fee
-          const event = await getEventById(state.eventId);
-          const fee = event ? event.fee : "N/A";
+          // Determine which fee to display
+          const applicableFee = getApplicableFee(state.eventId, userId);
+
           const paymentInfo =
             process.env.PAYMENT_CARD_NUMBER ||
             "Please contact admin for payment details";
@@ -446,7 +442,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           // Split the payment info to get card number and owner
           const [cardNumber, cardOwner] = paymentInfo.split(",");
 
-          const messageText = `Please pay ${fee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
+          const messageText = `Please pay ${applicableFee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
 
           bot.sendMessage(chatId, messageText, {
             reply_markup: getCancelKeyboard(),
@@ -553,9 +549,8 @@ export function registerEventHandlers(bot: TelegramBot) {
         state.studentId = msg.text;
         state.step = "collect_receipt_image";
 
-        // Get event details to show fee
-        const event = await getEventById(state.eventId);
-        const fee = event ? event.fee : "N/A";
+        const applicableFee = getApplicableFee(state.eventId, userId);
+
         const paymentInfo =
           process.env.PAYMENT_CARD_NUMBER ||
           "Please contact admin for payment details";
@@ -563,7 +558,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         // Split the payment info to get card number and owner
         const [cardNumber, cardOwner] = paymentInfo.split(",");
 
-        const messageText = `Please pay ${fee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
+        const messageText = `Please pay ${applicableFee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
 
         bot.sendMessage(chatId, messageText, {
           reply_markup: getCancelKeyboard(),
@@ -647,21 +642,14 @@ export function registerEventHandlers(bot: TelegramBot) {
 
     const event = await getEventById(registration.eventId);
     // 3) Forward the receipt image + info to admin group for approval
-    // Get user profile to determine which fee to show
-    const userProfile = await getUserProfile(userId);
-    const hasValidStudentId =
-      userProfile?.studentId && userProfile.studentId !== "0";
+
     // Determine which fee to display
-    const applicableFee = hasValidStudentId
-      ? event?.universityFee || event?.fee
-      : event?.fee;
+    const applicableFee = getApplicableFee(registration.eventId, userId);
 
     const caption = `*New Registration*\n\nName: ${state.firstName} ${
       state.lastName
     }\nPhone: ${state.phoneNumber}\nStudent ID: ${
       state.studentId || "None"
-    }\nFee Type: ${
-      hasValidStudentId ? "University Student" : "Regular"
     }\nFee Amount: $${applicableFee}\n`;
 
     const adminGroupMessage = await sendPhotoInTopic(

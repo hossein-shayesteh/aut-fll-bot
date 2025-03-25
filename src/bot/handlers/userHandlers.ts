@@ -8,10 +8,11 @@ import {
   getMainMenuKeyboard,
   getCancelKeyboard,
 } from "../keyboards/userKeyboards";
-import { getActiveEvents } from "../../services/eventService";
 import dotenv from "dotenv";
 import { registrationStates } from "./eventHandlers";
 import { AdminStates } from "./adminHandlers";
+import { startProfileEdit } from "../../utils/userHandlers/startProfileEdit";
+import { handleRegisterForEvents } from "../../utils/userHandlers/handleRegisterForEvents";
 
 dotenv.config();
 
@@ -165,7 +166,6 @@ export function registerUserHandlers(bot: TelegramBot) {
   // Separate events for clarity:
   bot.on("check_event_status", async (msg) => {
     if (!msg.from?.id) return;
-    const chatId = msg.chat.id;
     // We’ll handle the actual listing in `eventHandlers.ts`
     // For clarity, we trigger a function in `eventHandlers`.
     bot.emit("user_view_event_status", msg);
@@ -219,68 +219,38 @@ export function registerUserHandlers(bot: TelegramBot) {
 
   // Profile edit commands
   bot.onText(/\/editfirstname/, (msg) => {
-    if (!msg.from?.id) return;
-    const chatId = msg.chat.id;
-    userStates.set(msg.from.id, { state: "EDIT_USER_FIRST_NAME" });
-    bot.sendMessage(chatId, "Please enter your new first name:", {
-      reply_markup: getCancelKeyboard(),
-    });
+    startProfileEdit(
+      bot,
+      msg,
+      "EDIT_USER_FIRST_NAME",
+      "Please enter your new first name:"
+    );
   });
 
   bot.onText(/\/editlastname/, (msg) => {
-    if (!msg.from?.id) return;
-    const chatId = msg.chat.id;
-    userStates.set(msg.from.id, { state: "EDIT_USER_LAST_NAME" });
-    bot.sendMessage(chatId, "Please enter your new last name:", {
-      reply_markup: getCancelKeyboard(),
-    });
+    startProfileEdit(
+      bot,
+      msg,
+      "EDIT_USER_LAST_NAME",
+      "Please enter your new last name:"
+    );
   });
 
   bot.onText(/\/editphone/, (msg) => {
-    if (!msg.from?.id) return;
-    const chatId = msg.chat.id;
-    userStates.set(msg.from.id, { state: "EDIT_USER_PROFILE_PHONE" });
-    bot.sendMessage(chatId, "Please enter your new phone number:", {
-      reply_markup: getCancelKeyboard(),
-    });
+    startProfileEdit(
+      bot,
+      msg,
+      "EDIT_USER_PROFILE_PHONE",
+      "Please enter your new phone number:"
+    );
   });
 
   bot.onText(/\/editstudentid/, (msg) => {
-    if (!msg.from?.id) return;
-    const chatId = msg.chat.id;
-    userStates.set(msg.from.id, { state: "EDIT_USER_PROFILE_STUDENTID" });
-    bot.sendMessage(chatId, "Please enter your new student ID:", {
-      reply_markup: getCancelKeyboard(),
-    });
-  });
-}
-
-// Helper function for “Register for Events”
-async function handleRegisterForEvents(
-  bot: TelegramBot,
-  msg: TelegramBot.Message
-) {
-  const chatId = msg.chat.id;
-  // Get only active (or upcoming) events
-  const events = await getActiveEvents();
-  if (events.length === 0) {
-    bot.sendMessage(chatId, "No upcoming events at the moment.", {
-      reply_markup: getMainMenuKeyboard(),
-    });
-    return;
-  }
-
-  // Ask user to choose from a list of events (inline keyboard)
-  const inlineKeyboard = events.map((ev) => [
-    {
-      text: ev.name,
-      callback_data: `view_event_${ev.id}`, // We'll handle in eventHandlers
-    },
-  ]);
-
-  bot.sendMessage(chatId, "Select an event to register:", {
-    reply_markup: {
-      inline_keyboard: inlineKeyboard,
-    },
+    startProfileEdit(
+      bot,
+      msg,
+      "EDIT_USER_PROFILE_STUDENTID",
+      "Please enter your new student ID:"
+    );
   });
 }
