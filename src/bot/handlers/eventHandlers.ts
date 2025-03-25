@@ -1,10 +1,10 @@
+import { validators } from "./../../utils/validators";
 import TelegramBot from "node-telegram-bot-api";
 import {
   createRegistration,
   getRegistrationById,
   getUserRegistrations,
   cancelRegistration,
-  updateRegistrationStatus,
   updateRegistration,
   getRegistrationByUserAndEvent,
 } from "../../services/registrationService";
@@ -27,12 +27,15 @@ import {
   updateUserProfile,
 } from "../../services/userService";
 import dotenv from "dotenv";
-
 import { RegistrationStatus } from "../../database/models/Registration";
-import { sendMessageInTopic } from "../../utils/sendMessageInTopic";
-import { sendPhotoInTopic } from "../../utils/sendPhotoInTopic";
-import { getApplicableFee } from "../../utils/getApplicableFee";
+import { sendMessageInTopic } from "../../utils/eventHandlers/sendMessageInTopic";
+import { sendPhotoInTopic } from "../../utils/eventHandlers/sendPhotoInTopic";
+import { getApplicableFee } from "../../utils/eventHandlers/getApplicableFee";
 import { handleRegisterForEvents } from "../../utils/userHandlers/handleRegisterForEvents";
+import { getPaymentInstructions } from "../../utils/eventHandlers/getPaymentInstructions";
+import { handleRegistrationResponse } from "../../utils/eventHandlers/handleRegistrationResponse";
+import { moveToNextRegistrationStep } from "../../utils/eventHandlers/moveToNextRegistrationStep";
+import { validateAndUpdateField } from "../../utils/eventHandlers/validateAndUpdateField";
 
 dotenv.config();
 
@@ -40,7 +43,6 @@ dotenv.config();
 const ADMIN_GROUP_ID = Number(process.env.ADMIN_GROUP_ID) || 0;
 
 // For multi-step user registration
-
 export const registrationStates: Map<
   number,
   {
@@ -90,7 +92,6 @@ export function registerEventHandlers(bot: TelegramBot) {
     if (!chatId || !messageId) return;
 
     // 1. View event details
-    // 1. Update the view_event_ callback query handler to show appropriate fee
     if (query.data.startsWith("view_event_")) {
       const eventIdStr = query.data.replace("view_event_", "");
       const eventId = parseInt(eventIdStr, 10);
@@ -301,88 +302,22 @@ export function registerEventHandlers(bot: TelegramBot) {
     // 6. Handling admin's "Approve"/"Reject" from the admin group inline button
     else if (query.data.startsWith("approve_")) {
       const regId = parseInt(query.data.replace("approve_", ""), 10);
-
-      try {
-        const registration = await getRegistrationById(regId);
-
-        if (!registration) {
-          bot.answerCallbackQuery(query.id, {
-            text: "Registration not found.",
-            show_alert: true,
-          });
-          return;
-        }
-
-        // Update registration status to "approved"
-        await updateRegistrationStatus(regId, RegistrationStatus.APPROVED);
-
-        // Notify the user about the approval
-        const userChatId = registration.user.telegramId;
-        bot.sendMessage(
-          userChatId,
-          `🎉 Your registration for the event "${registration.event.name}" has been approved!`
-        );
-
-        // Edit the message in the admin group
-        const { approvalMessageId, approvalChatId } = registration;
-
-        await bot.editMessageCaption(
-          `✅ *Registration Approved*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}\n\nEvent: "${registration.event.name}" has been approved.`,
-          {
-            chat_id: approvalChatId,
-            message_id: approvalMessageId,
-            parse_mode: "Markdown",
-            reply_markup: undefined,
-          }
-        );
-      } catch (error) {
-        bot.answerCallbackQuery(query.id, {
-          text: "Error approving registration.",
-          show_alert: true,
-        });
-      }
+      const registration = await getRegistrationById(regId);
+      await handleRegistrationResponse(
+        bot,
+        registration,
+        RegistrationStatus.APPROVED,
+        query
+      );
     } else if (query.data.startsWith("reject_")) {
       const regId = parseInt(query.data.replace("reject_", ""), 10);
-
-      try {
-        const registration = await getRegistrationById(regId);
-
-        if (!registration) {
-          bot.answerCallbackQuery(query.id, {
-            text: "Registration not found.",
-            show_alert: true,
-          });
-          return;
-        }
-
-        // Update registration status to "rejected"
-        await updateRegistrationStatus(regId, RegistrationStatus.REJECTED);
-
-        // Notify the user about the rejection
-        const userChatId = registration.user.telegramId;
-        bot.sendMessage(
-          userChatId,
-          `❌ Your registration for the event "${registration.event.name}" has been rejected.`
-        );
-
-        // Edit the message in the admin group
-        const { approvalMessageId, approvalChatId } = registration;
-
-        await bot.editMessageCaption(
-          `❌ *Registration Rejected*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}\n\nEvent: "${registration.event.name}" has been rejected.`,
-          {
-            chat_id: approvalChatId,
-            message_id: approvalMessageId,
-            parse_mode: "Markdown",
-            reply_markup: undefined,
-          }
-        );
-      } catch (error) {
-        bot.answerCallbackQuery(query.id, {
-          text: "Error rejecting registration.",
-          show_alert: true,
-        });
-      }
+      const registration = await getRegistrationById(regId);
+      await handleRegistrationResponse(
+        bot,
+        registration,
+        RegistrationStatus.REJECTED,
+        query
+      );
     }
     // Handle pagination for registrations list
     else if (query.data.startsWith("reg_page_")) {
@@ -431,94 +366,65 @@ export function registerEventHandlers(bot: TelegramBot) {
         if (msg.text === "Yes, use this info") {
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
-
-          // Determine which fee to display
-          const applicableFee = getApplicableFee(state.eventId, userId);
-
-          const paymentInfo =
-            process.env.PAYMENT_CARD_NUMBER ||
-            "Please contact admin for payment details";
-
-          // Split the payment info to get card number and owner
-          const [cardNumber, cardOwner] = paymentInfo.split(",");
-
-          const messageText = `Please pay ${applicableFee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
-
-          bot.sendMessage(chatId, messageText, {
+          const applicableFee = await getApplicableFee(state.eventId, userId);
+          bot.sendMessage(chatId, getPaymentInstructions(applicableFee), {
             reply_markup: getCancelKeyboard(),
           });
         } else if (msg.text === "No, update my info") {
           // Move to normal flow
-          state.step = "collect_first_name";
-          bot.sendMessage(chatId, "Please enter your *First Name*:", {
-            parse_mode: "Markdown",
-            reply_markup: getCancelKeyboard(),
-          });
+          moveToNextRegistrationStep(
+            bot,
+            chatId,
+            state,
+            "collect_first_name",
+            "Please enter your *First Name*:"
+          );
         } else {
           // If they typed something else, remind them
           bot.sendMessage(chatId, "Please tap Yes or No (or Cancel).");
         }
         break;
 
-      // 2. Normal flow as you already have it...
+      // 2. Normal flow for collecting user information
       case "collect_first_name":
         state.firstName = msg.text;
-        state.step = "collect_last_name";
-        bot.sendMessage(chatId, "Please enter your *Last Name*:", {
-          parse_mode: "Markdown",
-          reply_markup: getCancelKeyboard(),
-        });
+        moveToNextRegistrationStep(
+          bot,
+          chatId,
+          state,
+          "collect_last_name",
+          "Please enter your *Last Name*:"
+        );
         break;
 
       case "collect_last_name":
         state.lastName = msg.text;
-        state.step = "collect_phone_number";
-        bot.sendMessage(
+        moveToNextRegistrationStep(
+          bot,
           chatId,
-          "Please enter your *Phone Number* (with country code if applicable):",
-          {
-            parse_mode: "Markdown",
-            reply_markup: getCancelKeyboard(),
-          }
+          state,
+          "collect_phone_number",
+          "Please enter your *Phone Number* (with country code if applicable):"
         );
         break;
 
       case "collect_phone_number":
-        // Make sure msg.text is defined
-        if (!msg.text) {
-          bot.sendMessage(chatId, "Please enter a valid phone number:", {
-            reply_markup: getCancelKeyboard(),
-          });
-          return;
-        }
-
-        // Validate phone number format
-        const phoneRegex = /((09)|(\+?989))\d{2}[-\s]?\d{3}[-\s]?\d{4}/g;
-        if (!phoneRegex.test(msg.text)) {
-          bot.sendMessage(
-            chatId,
-            "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):",
-            {
-              reply_markup: getCancelKeyboard(),
-            }
-          );
-          return;
-        }
-
-        state.phoneNumber = msg.text;
-        state.step = "collect_student_id";
-        bot.sendMessage(
+        const phoneValidated = validateAndUpdateField(
+          bot,
           chatId,
+          msg,
+          state,
+          validators.phoneNumber,
+          "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):",
+          "collect_student_id",
           "Please enter your *Student ID* if you are a university student, or enter *0* if you are not:",
-          {
-            parse_mode: "Markdown",
-            reply_markup: getCancelKeyboard(),
-          }
+          "phoneNumber"
         );
+        if (!phoneValidated) return;
         break;
 
       case "collect_student_id":
-        // Make sure msg.text is defined
+        // Special validation for student ID (can be "0")
         if (!msg.text) {
           bot.sendMessage(
             chatId,
@@ -531,36 +437,22 @@ export function registerEventHandlers(bot: TelegramBot) {
         }
 
         // Validate student ID format if not "0"
-        if (msg.text !== "0") {
-          const studentIdRegex =
-            /^(?:(?:9[6-9]|40[0-4])(?:(?:2[2-9]|3[0-4]|39|1[0-3])|1(?:2[2-9]|3[0-4]|39|1[0-3])|2(?:2[2-9]|3[0-4]|39|1[0-3]))(?:\d{3}))$/;
-          if (!studentIdRegex.test(msg.text)) {
-            bot.sendMessage(
-              chatId,
-              "Invalid student ID format. Please enter a valid Amirkabir University student ID or '0' if you're not a student:",
-              {
-                reply_markup: getCancelKeyboard(),
-              }
-            );
-            return;
-          }
+        if (msg.text !== "0" && !validators.studentId(msg.text)) {
+          bot.sendMessage(
+            chatId,
+            "Invalid student ID format. Please enter a valid Amirkabir University student ID or '0' if you're not a student:",
+            {
+              reply_markup: getCancelKeyboard(),
+            }
+          );
+          return;
         }
 
         state.studentId = msg.text;
         state.step = "collect_receipt_image";
 
-        const applicableFee = getApplicableFee(state.eventId, userId);
-
-        const paymentInfo =
-          process.env.PAYMENT_CARD_NUMBER ||
-          "Please contact admin for payment details";
-
-        // Split the payment info to get card number and owner
-        const [cardNumber, cardOwner] = paymentInfo.split(",");
-
-        const messageText = `Please pay ${applicableFee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
-
-        bot.sendMessage(chatId, messageText, {
+        const fee = await getApplicableFee(state.eventId, userId);
+        bot.sendMessage(chatId, getPaymentInstructions(fee), {
           reply_markup: getCancelKeyboard(),
         });
         break;

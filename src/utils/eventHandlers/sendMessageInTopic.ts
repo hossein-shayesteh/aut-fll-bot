@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { findOrCreateForumTopic } from "../services/forumTopicService";
+import { findOrCreateForumTopic } from "../../services/forumTopicService";
 
 export async function sendMessageInTopic(
   bot: TelegramBot,

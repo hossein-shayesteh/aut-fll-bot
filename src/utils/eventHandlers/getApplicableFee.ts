@@ -1,5 +1,5 @@
-import { getEventById } from "../services/eventService";
-import { getUserProfile } from "../services/userService";
+import { getEventById } from "../../services/eventService";
+import { getUserProfile } from "../../services/userService";
 
 export const getApplicableFee = async (eventId: number, userId: number) => {
   // Get event details to show fee
