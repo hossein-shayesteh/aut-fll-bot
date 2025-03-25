@@ -363,6 +363,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
     }
     // Confirm cancel event
     else if (data.startsWith("confirm_cancel_event_")) {
+      // TODO: Only allow uncomplete event to be cancel
       const eventId = parseInt(data.split("_")[3]);
       const event = await updateEventStatus(eventId, EventStatus.CANCELLED);
 
@@ -738,17 +739,15 @@ export function registerAdminHandlers(bot: TelegramBot) {
       if (text.toLowerCase() === "yes") {
         try {
           const event = await createEvent(userState.data);
-          const directLink = `https://t.me/${process.env.BOT_ID}?start=event_${event.id}`;
 
           bot.sendMessage(
             chatId,
-            `Event "${event.name}" created successfully!\n\nUse this link in channels or groups to let users register directly:\n\`\`\`${directLink}\`\`\``,
+            `Event "${event.name}" created successfully!\n`,
             {
               reply_markup: getAdminMenuKeyboard(),
             }
           );
 
-          // TODO: send a notification to a channel about the new event
           AdminStates.delete(userId);
         } catch (error) {
           bot.sendMessage(chatId, "Failed to create event. Please try again.", {

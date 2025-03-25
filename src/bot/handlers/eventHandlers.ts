@@ -21,11 +21,7 @@ import {
   getCancelKeyboard,
   getRegistrationApprovalKeyboard,
 } from "../keyboards/userKeyboards";
-import {
-  findOrCreateUser,
-  getUserProfile,
-  updateUserProfile,
-} from "../../services/userService";
+import { getUserProfile, updateUserProfile } from "../../services/userService";
 import dotenv from "dotenv";
 import { RegistrationStatus } from "../../database/models/Registration";
 import { sendMessageInTopic } from "../../utils/eventHandlers/sendMessageInTopic";
@@ -57,10 +53,10 @@ export const registrationStates: Map<
 
 export function registerEventHandlers(bot: TelegramBot) {
   // Run the update function when the bot starts
-  updateCompletedEvents();
+  // updateCompletedEvents();
 
   // Set up an interval to check for completed events every hour
-  setInterval(updateCompletedEvents, 60 * 60 * 1000);
+  // setInterval(updateCompletedEvents, 60 * 60 * 1000);
 
   // Event status
   bot.on("user_view_event_status", async (msg) => {
@@ -102,8 +98,10 @@ export function registerEventHandlers(bot: TelegramBot) {
         return;
       }
 
+      const userProfile = await getUserProfile(userId);
+
       // Determine which fee to display
-      const applicableFee = getApplicableFee(eventId, userId);
+      const applicableFee = await getApplicableFee(eventId, userId);
 
       // Show event details
       let textMessage = `*Event Details*\n\n`;
@@ -111,7 +109,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       textMessage += `Description: ${event.description}\n`;
       textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
       textMessage += `Location: ${event.location ?? "N/A"}\n`;
-      textMessage += `Fee: $${applicableFee}\n`;
+      if (userProfile?.studentId) textMessage += `Fee: $${applicableFee}\n`;
       textMessage += `Capacity: ${event.capacity}\n`;
       textMessage += `Status: ${event.status}\n`;
 
@@ -270,7 +268,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           // reply_markup: getMainMenuKeyboard(),
         });
 
-        const applicableFee = getApplicableFee(
+        const applicableFee = await getApplicableFee(
           registration.event.id,
           registration.user.telegramId
         );
@@ -378,9 +376,6 @@ export function registerEventHandlers(bot: TelegramBot) {
             "collect_first_name",
             "Please enter your *First Name*:"
           );
-        } else {
-          // If they typed something else, remind them
-          bot.sendMessage(chatId, "Please tap Yes or No (or Cancel).");
         }
         break;
 
@@ -450,7 +445,14 @@ export function registerEventHandlers(bot: TelegramBot) {
         state.studentId = msg.text;
         state.step = "collect_receipt_image";
 
-        const fee = await getApplicableFee(state.eventId, userId);
+        const event = await getEventById(state.eventId);
+
+        const hasValidStudentId = state.studentId && state.studentId !== "0";
+
+        const fee = hasValidStudentId
+          ? event?.universityFee || event?.fee || 0
+          : event?.fee || 0;
+
         bot.sendMessage(chatId, getPaymentInstructions(fee), {
           reply_markup: getCancelKeyboard(),
         });
@@ -481,7 +483,6 @@ export function registerEventHandlers(bot: TelegramBot) {
     }
 
     // 1) Update user profile info in DB
-    await findOrCreateUser(userId, state.firstName, state.lastName);
     await updateUserProfile(userId, {
       firstName: state.firstName,
       lastName: state.lastName,
@@ -535,7 +536,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     // 3) Forward the receipt image + info to admin group for approval
 
     // Determine which fee to display
-    const applicableFee = getApplicableFee(registration.eventId, userId);
+    const applicableFee = await getApplicableFee(registration.eventId, userId);
 
     const caption = `*New Registration*\n\nName: ${state.firstName} ${
       state.lastName

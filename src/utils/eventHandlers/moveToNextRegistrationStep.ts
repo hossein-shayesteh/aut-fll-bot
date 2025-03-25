@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { getCancelKeyboard } from "../keyboards/userKeyboards";
+import { getCancelKeyboard } from "../../bot/keyboards/userKeyboards";
 
 export const moveToNextRegistrationStep = (
   bot: TelegramBot,

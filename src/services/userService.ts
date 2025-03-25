@@ -8,29 +8,36 @@ export async function findOrCreateUser(
   firstName?: string,
   lastName?: string
 ): Promise<User> {
-  let user = await userRepository.findOne({ where: { telegramId } });
-
-  if (user) {
-    // If the user already exists, return it instead of trying to insert again
-    return user;
-  }
-
   try {
-    user = new User();
-    user.telegramId = telegramId;
-    user.firstName = firstName || "";
-    user.lastName = lastName || "";
-    user.isRegistered = false;
+    // First, try to find the existing user
+    let user = await userRepository.findOne({
+      where: { telegramId },
+    });
 
-    await userRepository.save(user);
+    // If user doesn't exist, create a new one
+    if (!user) {
+      user = userRepository.create({
+        telegramId,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        isRegistered: false,
+      });
+
+      await userRepository.save(user);
+    }
 
     return user;
-  } catch (e) {
-    const error: any = e;
-    if (error?.code === "SQLITE_CONSTRAINT" || error?.errno === 19) {
-      // If the user already exists, return it
-      return userRepository.findOneOrFail({ where: { telegramId } });
+  } catch (error) {
+    // If unique constraint violation, try to fetch the existing user
+    if (
+      error instanceof Error &&
+      error.message.includes("UNIQUE constraint failed")
+    ) {
+      return userRepository.findOneOrFail({
+        where: { telegramId },
+      });
     }
+
     throw error;
   }
 }

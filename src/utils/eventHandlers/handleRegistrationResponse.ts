@@ -39,7 +39,7 @@ export const handleRegistrationResponse = async (
       status === RegistrationStatus.APPROVED ? "Approved" : "Rejected";
 
     await bot.editMessageCaption(
-      `${statusEmojiCaption} *Registration ${statusCaption}*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}\n\nEvent: "${registration.event.name}" has been ${statusText}.`,
+      `${statusEmojiCaption} *Registration ${statusCaption}*\n\nName: ${registration.user.firstName} ${registration.user.lastName}\nPhone: ${registration.user.phoneNumber}\nStudent ID: ${registration.user.studentId}`,
       {
         chat_id: approvalChatId,
         message_id: approvalMessageId,
