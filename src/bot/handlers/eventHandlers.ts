@@ -478,6 +478,7 @@ export function registerEventHandlers(bot: TelegramBot) {
             filename: `${event.name.replace(/\s+/g, "_")}_registrants_${
               new Date().toISOString().split("T")[0]
             }.xlsx`,
+            contentType: "application/vnd.ms-excel",
           }
         );
 

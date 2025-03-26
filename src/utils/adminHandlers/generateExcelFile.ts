@@ -1,15 +1,49 @@
 import * as XLSX from "xlsx";
 import { Registration } from "../../database/models/Registration";
 import { Event } from "../../database/models/Event";
+import { getApplicableFee } from "../eventHandlers/getApplicableFee";
 
 export function generateExcelFile(
   event: Event,
   registrants: Registration[]
 ): Buffer {
+  // Set column widths
+  const eventInfoColumnWidths = [{ wch: 15 }, { wch: 25 }];
+  const registrantsColumnWidths = [
+    { wch: 5 }, // No.
+    { wch: 15 }, // First Name
+    { wch: 15 }, // Last Name
+    { wch: 15 }, // Status
+    { wch: 15 }, // Phone Number
+    { wch: 15 }, // Student ID
+    { wch: 15 }, // Payment Fee
+    { wch: 25 }, // Registration Date
+  ];
+  const summaryColumnWidths = [{ wch: 25 }, { wch: 15 }];
+
   // Create workbook and worksheet
   const workbook = XLSX.utils.book_new();
 
-  // Format data for Excel
+  // Add event information at the top
+  const eventInfo = [
+    ["Event Information"],
+    ["Name", event.name],
+    ["Date", event.eventDate.toLocaleString()],
+    ["Location", event.location || "N/A"],
+    ["Capacity", event.capacity.toString()],
+    ["Status", event.status],
+    ["Regular Fee", `$${event?.fee || 0}`],
+    ["University Fee", `$${event?.universityFee || event?.fee || 0}`],
+  ];
+
+  // Create a separate worksheet for event info
+  const infoWorksheet = XLSX.utils.aoa_to_sheet(eventInfo);
+  infoWorksheet["!cols"] = eventInfoColumnWidths;
+
+  // Add worksheets to workbook
+  XLSX.utils.book_append_sheet(workbook, infoWorksheet, "Event Info");
+
+  // Format data for Registration Date
   const data = registrants.map((reg, index) => {
     const user = reg.user;
     const hasValidStudentId = user?.studentId && user.studentId !== "0";
@@ -21,48 +55,16 @@ export function generateExcelFile(
       Status: reg.status,
       "Phone Number": user.phoneNumber || "N/A",
       "Student ID": user.studentId || "N/A",
-      "Payment Fee": hasValidStudentId
-        ? reg.event.universityFee
-        : reg.event.fee,
+      "Payment Fee": hasValidStudentId ? event.universityFee : event.fee,
       "Registration Date": reg.registrationDate.toLocaleString(),
     };
   });
 
   // Create worksheet
   const worksheet = XLSX.utils.json_to_sheet(data);
-
-  // Set column widths
-  const columnWidths = [
-    { wch: 5 }, // No.
-    { wch: 15 }, // First Name
-    { wch: 15 }, // Last Name
-    { wch: 15 }, // Status
-    { wch: 15 }, // Phone Number
-    { wch: 15 }, // Student ID
-    { wch: 15 }, // Payment Fee
-    { wch: 30 }, // Registration Date
-  ];
-  worksheet["!cols"] = columnWidths;
-
-  // Add event information at the top
-  const eventInfo = [
-    ["Event Information"],
-    ["Name", event.name],
-    ["Date", event.eventDate.toLocaleString()],
-    ["Location", event.location || "N/A"],
-    ["Capacity", event.capacity.toString()],
-    ["Status", event.status],
-    ["Regular Fee", `$${event.fee}`],
-    ["University Fee", `$${event.universityFee || event.fee}`],
-    [""],
-    ["Registrants List"],
-  ];
-
-  // Create a separate worksheet for event info
-  const infoWorksheet = XLSX.utils.aoa_to_sheet(eventInfo);
+  worksheet["!cols"] = registrantsColumnWidths;
 
   // Add worksheets to workbook
-  XLSX.utils.book_append_sheet(workbook, infoWorksheet, "Event Info");
   XLSX.utils.book_append_sheet(workbook, worksheet, "Registrants");
 
   // Generate summary statistics
@@ -84,8 +86,8 @@ export function generateExcelFile(
   const totalFees = approvedRegistrants.reduce((sum, reg) => {
     const user = reg.user;
     const hasValidStudentId = user?.studentId && user.studentId !== "0";
-    const fee = hasValidStudentId ? reg.event.universityFee : reg.event.fee;
-    return sum + (fee || 0);
+    const fee = hasValidStudentId ? event.universityFee : event.fee;
+    return sum + fee;
   }, 0);
 
   const summaryData = [
@@ -101,6 +103,8 @@ export function generateExcelFile(
   ];
 
   const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+  summaryWorksheet["!cols"] = summaryColumnWidths;
+
   XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Summary");
 
   // Convert to buffer
