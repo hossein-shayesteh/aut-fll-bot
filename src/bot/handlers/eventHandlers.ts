@@ -11,6 +11,7 @@ import {
 import {
   checkEventCapacity,
   getEventById,
+  getEventRegistrants,
   updateCompletedEvents,
 } from "../../services/eventService";
 import {
@@ -43,6 +44,7 @@ import { moveToNextRegistrationStep } from "../../utils/eventHandlers/moveToNext
 import { validateAndUpdateField } from "../../utils/eventHandlers/validateAndUpdateField";
 import { EventStatus } from "../../database/models/Event";
 import { escapeMarkdown } from "../../utils/escapeMarkdown";
+import { generateExcelFile } from "../../utils/adminHandlers/generateExcelFile";
 
 dotenv.config();
 
@@ -445,6 +447,50 @@ export function registerEventHandlers(bot: TelegramBot) {
       });
 
       bot.answerCallbackQuery(query.id);
+    }
+    // Export registrants to Excel
+    else if (query.data.startsWith("export_excel_")) {
+      const eventId = parseInt(query.data.split("_")[2]);
+
+      try {
+        const event = await getEventById(eventId);
+        const registrants = await getEventRegistrants(eventId);
+
+        if (!event || registrants.length === 0) {
+          bot.answerCallbackQuery(query.id, {
+            text: "No registrants to export",
+            show_alert: true,
+          });
+          return;
+        }
+
+        // Generate Excel file
+        const excelBuffer = generateExcelFile(event, registrants);
+
+        // Send the Excel file
+        bot.sendDocument(
+          chatId,
+          excelBuffer,
+          {
+            caption: `Registrants list for "${event.name}"`,
+          },
+          {
+            filename: `${event.name.replace(/\s+/g, "_")}_registrants_${
+              new Date().toISOString().split("T")[0]
+            }.xlsx`,
+          }
+        );
+
+        bot.answerCallbackQuery(query.id, {
+          text: "Exporting registrants to Excel...",
+        });
+      } catch (error) {
+        console.error("Excel export error:", error);
+        bot.answerCallbackQuery(query.id, {
+          text: "Failed to export registrants",
+          show_alert: true,
+        });
+      }
     }
   });
 

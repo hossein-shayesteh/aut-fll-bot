@@ -280,6 +280,15 @@ export function registerAdminHandlers(bot: TelegramBot) {
       } else {
         let message = "*Registrants List*\n\n";
 
+        // Add an export button to the keyboard
+        const keyboard = getAdminEventActionsKeyboard(eventId);
+        keyboard.inline_keyboard.unshift([
+          {
+            text: "📊 Export to Excel",
+            callback_data: `export_excel_${eventId}`,
+          },
+        ]);
+
         for (const reg of registrants) {
           const user = reg.user;
           let statusIcon = "";
@@ -333,7 +342,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
                 registrants.filter((r) => r.status === "cancelled").length
               }`,
             {
-              reply_markup: getAdminEventActionsKeyboard(eventId),
+              reply_markup: keyboard,
             }
           );
         } else {
@@ -341,7 +350,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             chat_id: chatId,
             message_id: messageId,
             parse_mode: "Markdown",
-            reply_markup: getAdminEventActionsKeyboard(eventId),
+            reply_markup: keyboard,
           });
         }
       }

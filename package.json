@@ -14,7 +14,8 @@
     "dotenv": "^16.4.7",
     "node-telegram-bot-api": "^0.66.0",
     "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.21"
+    "typeorm": "^0.3.21",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
