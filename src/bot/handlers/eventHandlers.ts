@@ -116,6 +116,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       // Determine which fee to display
       const applicableFee = await getApplicableFee(eventId, userId);
 
+      // TODO: Convert and display eventDate in Jalali calendar
       // Show event details
       let textMessage = `*Event Details*\n\n`;
       textMessage += `Name: ${escapeMarkdown(event.name)}\n`;
@@ -247,6 +248,8 @@ export function registerEventHandlers(bot: TelegramBot) {
       message += `Status: ${registration.status}\n`;
       message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
 
+      const isEventCancelled =
+        registration.event.status === EventStatus.CANCELLED;
       const isEventCompleted =
         registration.event.status === EventStatus.COMPLETED;
       const isRegistrationApproved =
@@ -257,7 +260,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         if (isEventCompleted) {
           // For completed events, show feedback options
           replyMarkup = getFeedbackSubmissionKeyboard(registration);
-        } else {
+        } else if (!isEventCancelled) {
           // For upcoming events, show only cancel option
           replyMarkup = getRegistrationDetailsKeyboard(registration);
         }
@@ -377,8 +380,6 @@ export function registerEventHandlers(bot: TelegramBot) {
           chat_id: chatId,
           message_id: messageId,
           parse_mode: "Markdown",
-          // TODO: Fix line below
-          // reply_markup: getMainMenuKeyboard(),
         });
 
         const applicableFee = await getApplicableFee(
@@ -399,7 +400,9 @@ export function registerEventHandlers(bot: TelegramBot) {
             registration.user.studentId ?? "N/A"
           }\n\nEvent: "${escapeMarkdown(
             registration.event.name
-          )}"\nFee: $${applicableFee}\n\nPlease process a refund if applicable.`,
+          )}"\nFee: $${applicableFee}\nPrevious Status: ${
+            registration.status
+          }\n\nPlease process a refund if applicable.`,
           {
             parse_mode: "Markdown",
           }

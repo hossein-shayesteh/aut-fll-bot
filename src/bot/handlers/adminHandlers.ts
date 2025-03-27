@@ -26,8 +26,14 @@ import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
 import { RegistrationStatus } from "../../database/models/Registration";
 import dotenv from "dotenv";
 import { escapeMarkdown } from "../../utils/escapeMarkdown";
+import { sendMessageInTopic } from "../../utils/eventHandlers/sendMessageInTopic";
+import { updateRegistration } from "../../services/registrationService";
+import { getApplicableFee } from "../../utils/eventHandlers/getApplicableFee";
 
 dotenv.config();
+
+// This is the group ID where the bot will forward payment proof
+const ADMIN_GROUP_ID = Number(process.env.ADMIN_GROUP_ID) || 0;
 
 // User states for multi-step operations
 export const AdminStates: Map<
@@ -75,6 +81,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
     if (!userId) return;
 
+    // TODO: Prompt for event poster image as the first step, store it, and display a preview to the admin in later confirmation steps
     checkAdminAccess(bot, msg, () => {
       AdminStates.set(userId, { state: "CREATE_EVENT_NAME" });
       bot.sendMessage(
@@ -371,7 +378,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
       bot.answerCallbackQuery(query.id);
     }
-    // Confirm cancel event
+
     // Confirm cancel event
     else if (data.startsWith("confirm_cancel_event_")) {
       const eventId = parseInt(data.split("_")[3]);
@@ -413,14 +420,47 @@ export function registerAdminHandlers(bot: TelegramBot) {
         return;
       }
 
-      // Notify only approved registrants
+      // Update the status of all related registrations to CANCELLED
       const registrants = await getEventRegistrants(eventId);
-      const approvedRegistrants = registrants.filter(
-        (r) => r.status === RegistrationStatus.APPROVED
+      const affectedRegistrants = registrants.filter(
+        (r) =>
+          r.status === RegistrationStatus.APPROVED ||
+          r.status === RegistrationStatus.PENDING
       );
 
-      for (const reg of approvedRegistrants) {
+      for (const reg of affectedRegistrants) {
         try {
+          // Update registration status to CANCELLED
+          await updateRegistration(reg.id, {
+            status: RegistrationStatus.CANCELLED,
+          });
+
+          const applicableFee = await getApplicableFee(
+            reg.event.id,
+            reg.user.telegramId
+          );
+
+          // Send cancellation message in topic for refund
+          await sendMessageInTopic(
+            bot,
+            ADMIN_GROUP_ID,
+            "Registration Cancellations",
+            `❌ *Registration Cancelled*\n\nName: ${
+              escapeMarkdown(reg.user.firstName) ?? "N/A"
+            } ${escapeMarkdown(reg.user.lastName) ?? ""}\nPhone: ${
+              reg.user.phoneNumber ?? "N/A"
+            }\nStudent ID: ${
+              reg.user.studentId ?? "N/A"
+            }\n\nEvent: "${escapeMarkdown(
+              updatedEvent.name
+            )}"\nFee: $${applicableFee}\nPrevious Status: ${
+              reg.status
+            }\n\nPlease process a refund if applicable.`,
+            {
+              parse_mode: "Markdown",
+            }
+          );
+
           await bot.sendMessage(
             reg.user.telegramId,
             `⚠️ *Event Cancelled* ⚠️\n\nThe event "${escapeMarkdown(

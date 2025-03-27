@@ -46,9 +46,9 @@ export async function getAllEvents(): Promise<Event[]> {
   return eventRepository.find({ order: { eventDate: "ASC" } });
 }
 
-export async function getActiveEvents(): Promise<Event[]> {
+export async function getFullAndActiveEvents(): Promise<Event[]> {
   return eventRepository.find({
-    where: { status: EventStatus.ACTIVE },
+    where: [{ status: EventStatus.ACTIVE }, { status: EventStatus.FULL }],
     order: { eventDate: "ASC" },
   });
 }

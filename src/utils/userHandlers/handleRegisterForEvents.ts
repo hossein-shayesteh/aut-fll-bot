@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { getMainMenuKeyboard } from "../../bot/keyboards/userKeyboards";
-import { getActiveEvents } from "../../services/eventService";
+import { getFullAndActiveEvents } from "../../services/eventService";
 
 // Helper function for “Register for Events”
 export const handleRegisterForEvents = async (
@@ -8,8 +8,8 @@ export const handleRegisterForEvents = async (
   msg: TelegramBot.Message | undefined
 ) => {
   const chatId = msg?.chat.id;
-  // Get only active (or upcoming) events
-  const events = await getActiveEvents();
+  // Get only active and full  events
+  const events = await getFullAndActiveEvents();
 
   if (events.length === 0) {
     if (chatId)

@@ -29,8 +29,11 @@ export async function createRegistration(
   });
 
   if (existingRegistration) {
-    // If already registered but was rejected, allow to re-register
-    if (existingRegistration.status === RegistrationStatus.REJECTED) {
+    // If already registered but was rejected or cancelled, allow to re-register
+    if (
+      existingRegistration.status === RegistrationStatus.REJECTED ||
+      existingRegistration.status === RegistrationStatus.CANCELLED
+    ) {
       existingRegistration.status = RegistrationStatus.PENDING;
       existingRegistration.receiptImageUrl = receiptImageUrl;
       existingRegistration.registrationDate = new Date();
