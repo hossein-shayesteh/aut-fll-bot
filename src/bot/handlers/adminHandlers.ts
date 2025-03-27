@@ -29,6 +29,7 @@ import { escapeMarkdown } from "../../utils/escapeMarkdown";
 import { sendMessageInTopic } from "../../utils/eventHandlers/sendMessageInTopic";
 import { updateRegistration } from "../../services/registrationService";
 import { getApplicableFee } from "../../utils/eventHandlers/getApplicableFee";
+import { getEventStatusIcon } from "../../utils/getEventStatusIcon";
 
 dotenv.config();
 
@@ -218,25 +219,9 @@ export function registerAdminHandlers(bot: TelegramBot) {
         return;
       }
 
-      let eventStatusIcon = "";
-      switch (event.status) {
-        case EventStatus.ACTIVE:
-          eventStatusIcon = "🟢";
-          break;
-        case EventStatus.FULL:
-          eventStatusIcon = "🟠";
-          break;
-        case EventStatus.COMPLETED:
-          eventStatusIcon = "🔵";
-          break;
-        case EventStatus.CANCELLED:
-          eventStatusIcon = "🔴";
-          break;
-      }
-
       let message = `*Event Details*\n\n`;
-      message += `Name: ${escapeMarkdown(event.name)}\n`;
-      message += `Description: ${escapeMarkdown(event.description) || "N/A"}\n`;
+      message += `*${escapeMarkdown(event.name)}*\n`;
+      message += `${escapeMarkdown(event.description) || "N/A"}\n`;
       message += `Date: ${event.eventDate.toLocaleString()}\n`;
       message += `Location: ${event.location || "N/A"}\n`;
       message += `Regular Fee: $${event.fee}\n`;
@@ -244,7 +229,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
         event.universityFee || event.fee
       }\n`;
       message += `Capacity: ${event.capacity}\n`;
-      message += `Status: ${eventStatusIcon} ${event.status}\n`;
+      message += `Status: ${getEventStatusIcon(event)} ${event.status}\n`;
 
       // Get registrant count
       const registrants = await getEventRegistrants(eventId);

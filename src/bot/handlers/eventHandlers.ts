@@ -45,6 +45,7 @@ import { validateAndUpdateField } from "../../utils/eventHandlers/validateAndUpd
 import { EventStatus } from "../../database/models/Event";
 import { escapeMarkdown } from "../../utils/escapeMarkdown";
 import { generateExcelFile } from "../../utils/adminHandlers/generateExcelFile";
+import { getEventStatusIcon } from "../../utils/getEventStatusIcon";
 
 dotenv.config();
 
@@ -119,13 +120,13 @@ export function registerEventHandlers(bot: TelegramBot) {
       // TODO: Convert and display eventDate in Jalali calendar
       // Show event details
       let textMessage = `*Event Details*\n\n`;
-      textMessage += `Name: ${escapeMarkdown(event.name)}\n`;
-      textMessage += `Description: ${escapeMarkdown(event.description)}\n`;
+      textMessage += `*${escapeMarkdown(event.name)}*\n`;
+      textMessage += `${escapeMarkdown(event.description)}\n`;
       textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
       textMessage += `Location: ${event.location ?? "N/A"}\n`;
       if (userProfile?.studentId) textMessage += `Fee: $${applicableFee}\n`;
       textMessage += `Capacity: ${event.capacity}\n`;
-      textMessage += `Status: ${event.status}\n`;
+      textMessage += `Status: ${getEventStatusIcon(event)} ${event.status}\n`;
 
       await bot.editMessageText(textMessage, {
         chat_id: chatId,
