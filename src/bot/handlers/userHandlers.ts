@@ -7,6 +7,7 @@ import { handleRegisterForEvents } from "../../utils/userHandlers/handleRegister
 import { clearUserStates } from "../../utils/userHandlers/clearUserStates";
 import { handleProfileFieldUpdate } from "../../utils/userHandlers/handleProfileFieldUpdate";
 import { validators } from "../../utils/validators";
+import { isAdminUser } from "../../middlewares/authMiddleware";
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     if (!userId) return;
 
+    const userIsAdmin = await isAdminUser(userId);
+
     // Clear any ongoing processes for this user
     clearUserStates(userId);
 
@@ -40,7 +43,7 @@ export function registerUserHandlers(bot: TelegramBot) {
       chatId,
       "Welcome to the Amirkabir University Language Center Bot.",
       {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       }
     );
   });
@@ -52,6 +55,8 @@ export function registerUserHandlers(bot: TelegramBot) {
     const userId = msg.from?.id;
     if (!userId) return;
 
+    const userIsAdmin = await isAdminUser(userId);
+
     // Check if we are in the middle of a multi-step flow
     if (userStates.has(userId)) {
       const { state } = userStates.get(userId)!;
@@ -60,7 +65,7 @@ export function registerUserHandlers(bot: TelegramBot) {
       if (msg.text.toLowerCase() === "cancel") {
         userStates.delete(userId);
         bot.sendMessage(chatId, "Operation cancelled.", {
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
         return;
       }
@@ -128,6 +133,13 @@ export function registerUserHandlers(bot: TelegramBot) {
         bot.emit("get_group_channel_links", msg);
         break;
 
+      case "Go to Admin Panel":
+        bot.emit("command", {
+          ...msg,
+          text: "/admin",
+        });
+        break;
+
       default:
         // Let other handlers catch
         break;
@@ -164,22 +176,28 @@ export function registerUserHandlers(bot: TelegramBot) {
     const userId = msg.from?.id;
     if (!userId) return;
 
+    const userIsAdmin = await isAdminUser(userId);
+
     const profile = await getUserProfile(userId);
     if (!profile) {
       bot.sendMessage(chatId, "Profile not found.", {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
     }
 
     bot.sendMessage(chatId, buildProfileMessage(profile), {
       parse_mode: "Markdown",
-      reply_markup: getMainMenuKeyboard(),
+      reply_markup: getMainMenuKeyboard(userIsAdmin),
     });
   });
 
   bot.on("get_group_channel_links", async (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from?.id;
+    if (!userId) return;
+
+    const userIsAdmin = await isAdminUser(userId);
 
     // Provide the relevant group/channel links
     const groupLink = process.env.PUBLIC_GROUP_LINK;
@@ -188,7 +206,7 @@ export function registerUserHandlers(bot: TelegramBot) {
     const message = `*Group & Channel Links*\n\n• Group: ${groupLink}\n• Channel: ${channelLink}`;
     bot.sendMessage(chatId, message, {
       parse_mode: "Markdown",
-      reply_markup: getMainMenuKeyboard(),
+      reply_markup: getMainMenuKeyboard(userIsAdmin),
     });
   });
 

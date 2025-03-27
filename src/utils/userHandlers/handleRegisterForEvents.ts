@@ -1,6 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { getMainMenuKeyboard } from "../../bot/keyboards/userKeyboards";
 import { getFullAndActiveEvents } from "../../services/eventService";
+import { isAdminUser } from "../../middlewares/authMiddleware";
 
 // Helper function for “Register for Events”
 export const handleRegisterForEvents = async (
@@ -8,13 +9,18 @@ export const handleRegisterForEvents = async (
   msg: TelegramBot.Message | undefined
 ) => {
   const chatId = msg?.chat.id;
+  const userId = msg?.from?.id;
+  if (!userId) return;
+
+  const userIsAdmin = await isAdminUser(userId);
+
   // Get only active and full  events
   const events = await getFullAndActiveEvents();
 
   if (events.length === 0) {
     if (chatId)
       bot.sendMessage(chatId, "No upcoming events at the moment.", {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
     return;
   }

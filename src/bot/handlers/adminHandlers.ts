@@ -1,5 +1,8 @@
 import TelegramBot from "node-telegram-bot-api";
-import { checkAdminAccess } from "../../middlewares/authMiddleware";
+import {
+  checkAdminAccess,
+  isAdminUser,
+} from "../../middlewares/authMiddleware";
 import {
   getAdminMenuKeyboard,
   getAdminEventsKeyboard,
@@ -158,14 +161,15 @@ export function registerAdminHandlers(bot: TelegramBot) {
   });
 
   // Back to main menu handler
-  bot.onText(/Back to Main Menu/, (msg) => {
+  bot.onText(/Back to Main Menu/, async (msg) => {
     const chatId = msg.chat.id;
     const userId = msg.from?.id;
 
     if (!userId) return;
+    const userIsAdmin = await isAdminUser(userId);
 
     bot.sendMessage(chatId, "Returning to main menu", {
-      reply_markup: getMainMenuKeyboard(),
+      reply_markup: getMainMenuKeyboard(userIsAdmin),
     });
   });
 

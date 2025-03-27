@@ -5,11 +5,18 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export function getMainMenuKeyboard(): TelegramBot.ReplyKeyboardMarkup {
+export function getMainMenuKeyboard(
+  isUserAdmin: boolean = false
+): TelegramBot.ReplyKeyboardMarkup {
   const keyboard = [
     [{ text: "Register for Events" }, { text: "Event Status" }],
     [{ text: "User Profile" }, { text: "Get Group & Channel Links" }],
   ];
+
+  // Add admin panel button if user is an admin
+  if (isUserAdmin) {
+    keyboard.push([{ text: "Go to Admin Panel" }]);
+  }
 
   return {
     keyboard,

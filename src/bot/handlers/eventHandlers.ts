@@ -46,6 +46,7 @@ import { EventStatus } from "../../database/models/Event";
 import { escapeMarkdown } from "../../utils/escapeMarkdown";
 import { generateExcelFile } from "../../utils/adminHandlers/generateExcelFile";
 import { getEventStatusIcon } from "../../utils/getEventStatusIcon";
+import { isAdminUser } from "../../middlewares/authMiddleware";
 
 dotenv.config();
 
@@ -78,10 +79,12 @@ export function registerEventHandlers(bot: TelegramBot) {
     const userId = msg.from?.id;
     if (!userId) return;
 
+    const userIsAdmin = await isAdminUser(userId);
+
     const registrations = await getUserRegistrations(userId);
     if (registrations.length === 0) {
       bot.sendMessage(chatId, "You have not registered for any events.", {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
     }
@@ -142,11 +145,14 @@ export function registerEventHandlers(bot: TelegramBot) {
       const eventIdStr = query.data.replace("register_", "");
       const eventId = parseInt(eventIdStr, 10);
 
+      const userId = query.from.id;
+      const userIsAdmin = await isAdminUser(userId);
+
       // Check if event has capacity before starting registration
       const hasCapacity = await checkEventCapacity(eventId);
       if (!hasCapacity) {
         bot.sendMessage(chatId, "Sorry, this event is already full.", {
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
         bot.answerCallbackQuery(query.id);
         return;
@@ -158,7 +164,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.sendMessage(
           chatId,
           "You are already registered and approved for this event.",
-          { reply_markup: getMainMenuKeyboard() }
+          { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
         bot.answerCallbackQuery(query.id);
         return;
@@ -504,6 +510,8 @@ export function registerEventHandlers(bot: TelegramBot) {
     const userId = msg.from?.id;
     if (!userId) return;
 
+    const userIsAdmin = await isAdminUser(userId);
+
     // If we're not in the middle of the registration flow, skip
     if (!registrationStates.has(userId)) return;
 
@@ -515,7 +523,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     if (msg.text && msg.text.toLowerCase() === "cancel") {
       registrationStates.delete(userId);
       bot.sendMessage(chatId, "Registration cancelled.", {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
     }
@@ -641,7 +649,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           chatId,
           "Thank you for your feedback! Your comment has been recorded.",
           {
-            reply_markup: getMainMenuKeyboard(),
+            reply_markup: getMainMenuKeyboard(userIsAdmin),
           }
         );
 
@@ -654,6 +662,8 @@ export function registerEventHandlers(bot: TelegramBot) {
   bot.on("photo", async (msg) => {
     const userId = msg.from?.id;
     if (!userId) return;
+
+    const userIsAdmin = await isAdminUser(userId);
 
     if (!registrationStates.has(userId)) return;
     const chatId = msg.chat.id;
@@ -697,19 +707,19 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.sendMessage(
           chatId,
           "You are already registered and approved for this event.",
-          { reply_markup: getMainMenuKeyboard() }
+          { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
       } else if (!isFull) {
         // Probably some other error (e.g., DB error)
         bot.sendMessage(
           chatId,
           "Failed to register. The event may be full or an error occurred.",
-          { reply_markup: getMainMenuKeyboard() }
+          { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
       } else {
         // isFull === true => event capacity is reached
         bot.sendMessage(chatId, "Sorry, this event is already full.", {
-          reply_markup: getMainMenuKeyboard(),
+          reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
       }
 
@@ -753,7 +763,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       chatId,
       "Your registration request has been submitted and is awaiting admin approval.",
       {
-        reply_markup: getMainMenuKeyboard(),
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
       }
     );
 

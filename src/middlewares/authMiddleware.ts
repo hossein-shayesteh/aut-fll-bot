@@ -66,7 +66,7 @@ export function checkGroupAdmin(
         });
       }
     })
-    .catch((error) => {
+    .catch(() => {
       bot.answerCallbackQuery(query.id, {
         text: "Error verifying your admin status. Please try again.",
         show_alert: true,
