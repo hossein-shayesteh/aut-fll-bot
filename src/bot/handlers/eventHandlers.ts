@@ -127,7 +127,8 @@ export function registerEventHandlers(bot: TelegramBot) {
       textMessage += `${escapeMarkdown(event.description)}\n`;
       textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
       textMessage += `Location: ${event.location ?? "N/A"}\n`;
-      if (userProfile?.studentId) textMessage += `Fee: $${applicableFee}\n`;
+      if (userProfile?.studentId)
+        textMessage += `Fee: ${applicableFee} toman\n`;
       textMessage += `Capacity: ${event.capacity}\n`;
       textMessage += `Status: ${getEventStatusIcon(event)} ${event.status}\n`;
 
@@ -407,7 +408,7 @@ export function registerEventHandlers(bot: TelegramBot) {
             registration.user.studentId ?? "N/A"
           }\n\nEvent: "${escapeMarkdown(
             registration.event.name
-          )}"\nFee: $${applicableFee}\nPrevious Status: ${
+          )}"\nFee: ${applicableFee}\nPrevious Status: ${
             registration.status
           }\n\nPlease process a refund if applicable.`,
           {

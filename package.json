@@ -8,16 +8,21 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/bot/index.js",
-    "dev": "ts-node --esm src/bot/index.ts"
+    "dev": "ts-node --esm src/bot/index.ts",
+    "start:forever": "forever start dist/bot/index.js",
+    "stop:forever": "forever stop dist/bot/index.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
+    "forever": "^4.0.3",
+    "moment-jalaali": "^0.10.4",
     "node-telegram-bot-api": "^0.66.0",
     "sqlite3": "^5.1.7",
     "typeorm": "^0.3.21",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/moment-jalaali": "^0.7.9",
     "@types/node": "^22.13.10",
     "@types/node-telegram-bot-api": "^0.64.8",
     "ts-node": "^10.9.2",

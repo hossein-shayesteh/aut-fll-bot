@@ -1,7 +1,6 @@
 import * as XLSX from "xlsx";
 import { Registration } from "../../database/models/Registration";
 import { Event } from "../../database/models/Event";
-import { getApplicableFee } from "../eventHandlers/getApplicableFee";
 
 export function generateExcelFile(
   event: Event,
