@@ -1,13 +1,16 @@
 import TelegramBot from "node-telegram-bot-api";
 import { findOrCreateUser, getUserProfile } from "../../services/userService";
-import { getMainMenuKeyboard } from "../keyboards/userKeyboards";
+import {
+  getMainMenuKeyboard,
+  getUserEditProfileKeyboard,
+} from "../keyboards/userKeyboards";
 import dotenv from "dotenv";
-import { startProfileEdit } from "../../utils/userHandlers/startProfileEdit";
 import { handleRegisterForEvents } from "../../utils/userHandlers/handleRegisterForEvents";
 import { clearUserStates } from "../../utils/userHandlers/clearUserStates";
 import { handleProfileFieldUpdate } from "../../utils/userHandlers/handleProfileFieldUpdate";
 import { validators } from "../../utils/validators";
 import { isAdminUser } from "../../middlewares/authMiddleware";
+import { escapeMarkdown } from "../../utils/escapeMarkdown";
 
 dotenv.config();
 
@@ -59,7 +62,7 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     // Check if we are in the middle of a multi-step flow
     if (userStates.has(userId)) {
-      const { state } = userStates.get(userId)!;
+      const { state, data } = userStates.get(userId)!;
 
       // If the user sends "Cancel" mid-flow
       if (msg.text.toLowerCase() === "cancel") {
@@ -80,7 +83,19 @@ export function registerUserHandlers(bot: TelegramBot) {
             "firstName",
             msg.text
           );
+
+          // If we should return to profile view after update
+          if (data?.returnToProfile) {
+            const updatedProfile = await getUserProfile(userId);
+            if (updatedProfile) {
+              bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+                parse_mode: "Markdown",
+                reply_markup: getUserEditProfileKeyboard(),
+              });
+            }
+          }
           return;
+
         case "EDIT_USER_LAST_NAME":
           await handleProfileFieldUpdate(
             bot,
@@ -89,7 +104,19 @@ export function registerUserHandlers(bot: TelegramBot) {
             "lastName",
             msg.text
           );
+
+          // If we should return to profile view after update
+          if (data?.returnToProfile) {
+            const updatedProfile = await getUserProfile(userId);
+            if (updatedProfile) {
+              bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+                parse_mode: "Markdown",
+                reply_markup: getUserEditProfileKeyboard(),
+              });
+            }
+          }
           return;
+
         case "EDIT_USER_PROFILE_PHONE":
           await handleProfileFieldUpdate(
             bot,
@@ -100,7 +127,19 @@ export function registerUserHandlers(bot: TelegramBot) {
             validators.phoneNumber,
             "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):"
           );
+
+          // If we should return to profile view after update
+          if (data?.returnToProfile) {
+            const updatedProfile = await getUserProfile(userId);
+            if (updatedProfile) {
+              bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+                parse_mode: "Markdown",
+                reply_markup: getUserEditProfileKeyboard(),
+              });
+            }
+          }
           return;
+
         case "EDIT_USER_PROFILE_STUDENTID":
           await handleProfileFieldUpdate(
             bot,
@@ -111,6 +150,17 @@ export function registerUserHandlers(bot: TelegramBot) {
             validators.studentId,
             "Invalid student ID format. Please enter a valid Amirkabir University student ID:"
           );
+
+          // If we should return to profile view after update
+          if (data?.returnToProfile) {
+            const updatedProfile = await getUserProfile(userId);
+            if (updatedProfile) {
+              bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+                parse_mode: "Markdown",
+                reply_markup: getUserEditProfileKeyboard(),
+              });
+            }
+          }
           return;
       }
     }
@@ -157,16 +207,10 @@ export function registerUserHandlers(bot: TelegramBot) {
   // Helper function to build profile message
   const buildProfileMessage = (profile: any) => {
     let message = `*Your Profile*\n\n`;
-    message += `First Name: ${profile.firstName ?? ""}\n`;
-    message += `Last Name: ${profile.lastName ?? ""}\n`;
+    message += `First Name: ${escapeMarkdown(profile.firstName) ?? ""}\n`;
+    message += `Last Name: ${escapeMarkdown(profile.lastName) ?? ""}\n`;
     message += `Phone Number: ${profile.phoneNumber ?? ""}\n`;
     message += `Student ID: ${profile.studentId ?? ""}\n`;
-
-    message += `\nYou can update your info:\n`;
-    message += "• Type /editfirstname to update first name\n";
-    message += "• Type /editlastname to update last name\n";
-    message += "• Type /editphone to update phone number\n";
-    message += "• Type /editstudentid to update student ID";
 
     return message;
   };
@@ -188,8 +232,82 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     bot.sendMessage(chatId, buildProfileMessage(profile), {
       parse_mode: "Markdown",
-      reply_markup: getMainMenuKeyboard(userIsAdmin),
+      reply_markup: getUserEditProfileKeyboard(),
     });
+  });
+
+  // Handle inline keyboard callbacks for profile editing
+  bot.on("callback_query", async (query) => {
+    if (!query.data) return;
+
+    const chatId = query.message?.chat.id;
+    const userId = query.from.id;
+    const data = query.data;
+    const messageId = query.message?.message_id;
+
+    if (!chatId || !messageId) return;
+
+    // Acknowledge the callback query
+    bot.answerCallbackQuery(query.id);
+
+    const userIsAdmin = await isAdminUser(userId);
+
+    // Only delete messages for profile-related actions
+    const profileActions = [
+      "profile_edit_first_name",
+      "profile_edit_last_name",
+      "profile_edit_phone",
+      "profile_edit_student_id",
+      "back_to_main",
+    ];
+
+    if (profileActions.includes(data)) {
+      // Delete the current profile message only for profile-related actions
+      bot.deleteMessage(chatId, messageId);
+    }
+
+    if (data === "back_to_main") {
+      clearUserStates(userId);
+      bot.sendMessage(chatId, "Returning to main menu", {
+        reply_markup: getMainMenuKeyboard(userIsAdmin),
+      });
+      return;
+    }
+
+    // Handle profile edit options
+    switch (data) {
+      case "profile_edit_first_name":
+        userStates.set(userId, {
+          state: "EDIT_USER_FIRST_NAME",
+          data: { returnToProfile: true },
+        });
+        bot.sendMessage(chatId, "Please enter your new first name:");
+        break;
+
+      case "profile_edit_last_name":
+        userStates.set(userId, {
+          state: "EDIT_USER_LAST_NAME",
+          data: { returnToProfile: true },
+        });
+        bot.sendMessage(chatId, "Please enter your new last name:");
+        break;
+
+      case "profile_edit_phone":
+        userStates.set(userId, {
+          state: "EDIT_USER_PROFILE_PHONE",
+          data: { returnToProfile: true },
+        });
+        bot.sendMessage(chatId, "Please enter your new phone number:");
+        break;
+
+      case "profile_edit_student_id":
+        userStates.set(userId, {
+          state: "EDIT_USER_PROFILE_STUDENTID",
+          data: { returnToProfile: true },
+        });
+        bot.sendMessage(chatId, "Please enter your new student ID:");
+        break;
+    }
   });
 
   bot.on("get_group_channel_links", async (msg) => {
@@ -207,36 +325,6 @@ export function registerUserHandlers(bot: TelegramBot) {
     bot.sendMessage(chatId, message, {
       parse_mode: "Markdown",
       reply_markup: getMainMenuKeyboard(userIsAdmin),
-    });
-  });
-
-  // Profile edit commands - using the same helper function for all commands
-  const profileEditCommands = [
-    {
-      command: /\/editfirstname/,
-      state: "EDIT_USER_FIRST_NAME",
-      message: "Please enter your new first name:",
-    },
-    {
-      command: /\/editlastname/,
-      state: "EDIT_USER_LAST_NAME",
-      message: "Please enter your new last name:",
-    },
-    {
-      command: /\/editphone/,
-      state: "EDIT_USER_PROFILE_PHONE",
-      message: "Please enter your new phone number:",
-    },
-    {
-      command: /\/editstudentid/,
-      state: "EDIT_USER_PROFILE_STUDENTID",
-      message: "Please enter your new student ID:",
-    },
-  ];
-
-  profileEditCommands.forEach(({ command, state, message }) => {
-    bot.onText(command, (msg) => {
-      startProfileEdit(bot, msg, state, message);
     });
   });
 }

@@ -251,17 +251,25 @@ export function registerEventHandlers(bot: TelegramBot) {
         return;
       }
 
-      let message = `*Registration Details*\n\n`;
-      message += `Event: ${escapeMarkdown(registration.event.name)}\n`;
-      message += `Status: ${registration.status}\n`;
-      message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
-
       const isEventCancelled =
         registration.event.status === EventStatus.CANCELLED;
       const isEventCompleted =
         registration.event.status === EventStatus.COMPLETED;
       const isRegistrationApproved =
         registration.status === RegistrationStatus.APPROVED;
+
+      let message = `*Registration Details*\n\n`;
+      message += `Event: ${escapeMarkdown(registration.event.name)}\n`;
+      message += `Status: ${registration.status}\n`;
+      message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
+
+      if (isEventCancelled) {
+        message += `\n⚠️ *Important: This event has been cancelled.*`;
+      } else if (isEventCompleted) {
+        message += `\n✅ This event has been completed.`;
+      } else if (isRegistrationApproved) {
+        message += `\n🎉 Your registration is approved!`;
+      }
 
       let replyMarkup;
       if (isRegistrationApproved) {

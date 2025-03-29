@@ -392,6 +392,12 @@ export function registerAdminHandlers(bot: TelegramBot) {
           text: `Cannot cancel event with status: ${event.status}. Only ACTIVE or FULL events can be cancelled.`,
           show_alert: true,
         });
+
+        // Send a message to provide clearer feedback
+        bot.sendMessage(
+          chatId,
+          `Cannot cancel event with status: ${event.status}.\nOnly ACTIVE or FULL events can be cancelled.`
+        );
         return;
       }
 
@@ -411,45 +417,16 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
       // Update the status of all related registrations to CANCELLED
       const registrants = await getEventRegistrants(eventId);
-      const affectedRegistrants = registrants.filter(
-        (r) =>
-          r.status === RegistrationStatus.APPROVED ||
-          r.status === RegistrationStatus.PENDING
+      const approvedRegistrants = registrants.filter(
+        (r) => r.status === RegistrationStatus.APPROVED
       );
 
-      for (const reg of affectedRegistrants) {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const reg of approvedRegistrants) {
         try {
-          // Update registration status to CANCELLED
-          await updateRegistration(reg.id, {
-            status: RegistrationStatus.CANCELLED,
-          });
-
-          const applicableFee = await getApplicableFee(
-            reg.event.id,
-            reg.user.telegramId
-          );
-
-          // Send cancellation message in topic for refund
-          await sendMessageInTopic(
-            bot,
-            ADMIN_GROUP_ID,
-            "Registration Cancellations",
-            `❌ *Registration Cancelled*\n\nName: ${
-              escapeMarkdown(reg.user.firstName) ?? "N/A"
-            } ${escapeMarkdown(reg.user.lastName) ?? ""}\nPhone: ${
-              reg.user.phoneNumber ?? "N/A"
-            }\nStudent ID: ${
-              reg.user.studentId ?? "N/A"
-            }\n\nEvent: "${escapeMarkdown(
-              updatedEvent.name
-            )}"\nFee: $${applicableFee}\nPrevious Status: ${
-              reg.status
-            }\n\nPlease process a refund if applicable.`,
-            {
-              parse_mode: "Markdown",
-            }
-          );
-
+          // Send notification to user
           await bot.sendMessage(
             reg.user.telegramId,
             `⚠️ *Event Cancelled* ⚠️\n\nThe event "${escapeMarkdown(
@@ -457,11 +434,32 @@ export function registerAdminHandlers(bot: TelegramBot) {
             )}" scheduled for ${updatedEvent.eventDate.toLocaleString()} has been cancelled.`,
             { parse_mode: "Markdown" }
           );
-        } catch (error) {}
+
+          successCount++;
+        } catch (error) {
+          failCount++;
+        }
       }
 
+      // Send a summary message to the admin group
+      try {
+        await sendMessageInTopic(
+          bot,
+          ADMIN_GROUP_ID,
+          "Event Updates",
+          `🚫 *Event Cancelled*\n\nEvent: "${escapeMarkdown(
+            updatedEvent.name
+          )}"\nDate: ${updatedEvent.eventDate.toLocaleString()}\nAffected registrations: ${
+            approvedRegistrants.length
+          }\nNotifications sent: ${successCount}\nFailed notifications: ${failCount}`,
+          {
+            parse_mode: "Markdown",
+          }
+        );
+      } catch (error) {}
+
       bot.editMessageText(
-        `Event "${updatedEvent.name}" has been cancelled and all approved registrants have been notified.`,
+        `Event "${updatedEvent.name}" has been cancelled and ${successCount} registrants have been notified. ${failCount} notifications failed.`,
         {
           chat_id: chatId,
           message_id: messageId,
@@ -924,8 +922,15 @@ export function registerAdminHandlers(bot: TelegramBot) {
 
         await updateEvent(eventId, updateData);
 
-        bot.sendMessage(chatId, `Event ${attribute} updated successfully!`, {
-          reply_markup: getAdminMenuKeyboard(),
+        // First send success message
+        await bot.sendMessage(
+          chatId,
+          `Event ${attribute} updated successfully!`
+        );
+
+        // Then send the edit options again to continue editing
+        bot.sendMessage(chatId, "Select what you want to edit:", {
+          reply_markup: getEventEditKeyboard(eventId),
         });
 
         AdminStates.delete(userId);

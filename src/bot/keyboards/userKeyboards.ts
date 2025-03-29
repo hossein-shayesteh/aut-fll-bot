@@ -204,3 +204,18 @@ export function getFeedbackRatingKeyboard(
     ],
   };
 }
+
+export function getUserEditProfileKeyboard(): TelegramBot.InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Edit First Name", callback_data: "profile_edit_first_name" },
+        { text: "Edit Last Name", callback_data: "profile_edit_last_name" },
+      ],
+      [
+        { text: "Edit Phone Number", callback_data: "profile_edit_phone" },
+        { text: "Edit Student ID", callback_data: "profile_edit_student_id" },
+      ],
+    ],
+  };
+}
