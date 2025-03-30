@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { Registration } from "../../database/models/Registration";
 import { Event } from "../../database/models/Event";
+import { isStudentIdProvided } from "../eventHandlers/isStudentIdProvided";
 
 export function generateExcelFile(
   event: Event,
@@ -45,7 +46,7 @@ export function generateExcelFile(
   // Format data for Registration Date
   const data = registrants.map((reg, index) => {
     const user = reg.user;
-    const hasValidStudentId = user?.studentId && user.studentId !== "0";
+    const hasValidStudentId = isStudentIdProvided(user?.studentId);
 
     return {
       "No.": index + 1,
@@ -84,7 +85,7 @@ export function generateExcelFile(
   );
   const totalFees = approvedRegistrants.reduce((sum, reg) => {
     const user = reg.user;
-    const hasValidStudentId = user?.studentId && user.studentId !== "0";
+    const hasValidStudentId = isStudentIdProvided(user?.studentId);
     const fee = hasValidStudentId ? event.universityFee : event.fee;
     return sum + fee;
   }, 0);

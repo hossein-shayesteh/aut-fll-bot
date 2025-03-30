@@ -20,7 +20,7 @@ export async function createEvent(eventData: Partial<Event>): Promise<Event> {
 
 export async function updateEvent(
   id: number,
-  eventData: Partial<Event>
+  newData: Partial<Event>
 ): Promise<Event | null> {
   const event = await eventRepository.findOne({ where: { id } });
 
@@ -28,8 +28,46 @@ export async function updateEvent(
     return null;
   }
 
-  // Update fields if provided
-  Object.assign(event, eventData);
+  const originalStatus = event.status;
+  const originalCapacity = event.capacity;
+  const originalEventDate = event.eventDate;
+
+  const newCapacity = newData.capacity;
+  const newEventDate = newData.eventDate;
+
+  // Store the updated event data
+  Object.assign(event, newData);
+
+  if (newEventDate || newCapacity) {
+    const now = new Date();
+
+    // If event was COMPLETED but new date is in the future, make it ACTIVE
+    if (
+      originalStatus === EventStatus.COMPLETED &&
+      newEventDate &&
+      newEventDate > now
+    ) {
+      event.status = EventStatus.ACTIVE;
+    }
+
+    // If event was CANCELLED but new date is later than original, make it ACTIVE
+    if (
+      originalStatus === EventStatus.CANCELLED &&
+      newEventDate &&
+      newEventDate > originalEventDate
+    ) {
+      event.status = EventStatus.ACTIVE;
+    }
+
+    // If event was FULL but capacity increased, make it ACTIVE
+    if (
+      originalStatus === EventStatus.FULL &&
+      newCapacity &&
+      newCapacity > originalCapacity
+    ) {
+      event.status = EventStatus.ACTIVE;
+    }
+  }
 
   await eventRepository.save(event);
   return event;

@@ -42,7 +42,7 @@ export function registerUserHandlers(bot: TelegramBot) {
     await findOrCreateUser(userId, firstName, lastName);
 
     // Send welcome message + main menu
-    bot.sendMessage(chatId, "به ربات مرکز زبان دانشگاه امیرکبیر خوش آمدید.", {
+    bot.sendMessage(chatId, "به ربات کانون زبان دانشگاه امیرکبیر خوش آمدید.", {
       reply_markup: getMainMenuKeyboard(userIsAdmin),
     });
   });

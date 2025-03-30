@@ -124,7 +124,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const applicableFee = await getApplicableFee(eventId, userId);
 
       const eventData = new Intl.DateTimeFormat("fa-IR", {
-        dateStyle: "full",
+        dateStyle: "medium",
         timeStyle: "short",
       }).format(event.eventDate);
 
@@ -272,7 +272,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         registration.status === RegistrationStatus.APPROVED;
 
       const registrationDate = new Intl.DateTimeFormat("fa-IR", {
-        dateStyle: "full",
+        dateStyle: "medium",
         timeStyle: "short",
       }).format(registration.registrationDate);
 
@@ -572,7 +572,14 @@ export function registerEventHandlers(bot: TelegramBot) {
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
           const applicableFee = await getApplicableFee(state.eventId, userId);
-          bot.sendMessage(chatId, getPaymentInstructions(applicableFee), {
+          const user = await getUserProfile(userId);
+
+          const paymentInstructions = getPaymentInstructions(
+            applicableFee,
+            user?.studentId
+          );
+
+          bot.sendMessage(chatId, paymentInstructions, {
             reply_markup: getCancelKeyboard(),
           });
         } else if (msg.text === "خیر، اطلاعات من را به‌روز کن") {
@@ -661,7 +668,12 @@ export function registerEventHandlers(bot: TelegramBot) {
           ? event?.universityFee || event?.fee || 0
           : event?.fee || 0;
 
-        bot.sendMessage(chatId, getPaymentInstructions(fee), {
+        const paymentInstructions = getPaymentInstructions(
+          fee,
+          state.studentId
+        );
+
+        bot.sendMessage(chatId, paymentInstructions, {
           reply_markup: getCancelKeyboard(),
         });
         break;
