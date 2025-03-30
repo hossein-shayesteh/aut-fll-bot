@@ -2,6 +2,13 @@
 
 This project is a Telegram bot for managing events, registrations, and user profiles. It includes functionality for both administrators and users. Administrators can manage events, view registrants, and send announcements, while users can register for events, view event details, and check their registration status.
 
+## Documentation
+
+For detailed instructions on how to use the bot:
+
+- [User Documentation](./docs/user/README.md) - For end users of the bot
+- [Admin Documentation](./docs/admin/README.md) - For administrators
+
 ## Features
 
 ### For Admins
