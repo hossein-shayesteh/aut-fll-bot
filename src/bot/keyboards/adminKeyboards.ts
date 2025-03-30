@@ -90,22 +90,28 @@ export function getEventEditKeyboard(eventId: number) {
     inline_keyboard: [
       [
         { text: "Edit Name", callback_data: `edit_name_${eventId}` },
-        { text: "Edit Description", callback_data: `edit_description_${eventId}` }
+        {
+          text: "Edit Description",
+          callback_data: `edit_description_${eventId}`,
+        },
       ],
       [
         { text: "Edit Capacity", callback_data: `edit_capacity_${eventId}` },
-        { text: "Edit Regular Fee", callback_data: `edit_fee_${eventId}` }
+        { text: "Edit Regular Fee", callback_data: `edit_fee_${eventId}` },
       ],
       [
-        { text: "Edit University Fee", callback_data: `edit_universityfee_${eventId}` },
-        { text: "Edit Date", callback_data: `edit_date_${eventId}` }
+        {
+          text: "Edit University Fee",
+          callback_data: `edit_universityfee_${eventId}`,
+        },
+        { text: "Edit Date", callback_data: `edit_date_${eventId}` },
       ],
       [
         { text: "Edit Location", callback_data: `edit_location_${eventId}` },
-        { text: "Edit Poster", callback_data: `edit_poster_${eventId}` }
+        { text: "Edit Poster", callback_data: `edit_poster_${eventId}` },
       ],
-      [{ text: "Back", callback_data: `admin_event_${eventId}` }]
-    ]
+      [{ text: "Back", callback_data: `admin_event_${eventId}` }],
+    ],
   };
 }
 

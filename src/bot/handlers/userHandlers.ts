@@ -42,13 +42,9 @@ export function registerUserHandlers(bot: TelegramBot) {
     await findOrCreateUser(userId, firstName, lastName);
 
     // Send welcome message + main menu
-    bot.sendMessage(
-      chatId,
-      "Welcome to the Amirkabir University Language Center Bot.",
-      {
-        reply_markup: getMainMenuKeyboard(userIsAdmin),
-      }
-    );
+    bot.sendMessage(chatId, "به ربات مرکز زبان دانشگاه امیرکبیر خوش آمدید.", {
+      reply_markup: getMainMenuKeyboard(userIsAdmin),
+    });
   });
 
   // Handle direct clicks on main menu text options
@@ -65,9 +61,9 @@ export function registerUserHandlers(bot: TelegramBot) {
       const { state, data } = userStates.get(userId)!;
 
       // If the user sends "Cancel" mid-flow
-      if (msg.text.toLowerCase() === "cancel") {
+      if (msg.text.toLowerCase() === "لغو") {
         userStates.delete(userId);
-        bot.sendMessage(chatId, "Operation cancelled.", {
+        bot.sendMessage(chatId, "عملیات لغو شد.", {
           reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
         return;
@@ -125,7 +121,7 @@ export function registerUserHandlers(bot: TelegramBot) {
             "phoneNumber",
             msg.text,
             validators.phoneNumber,
-            "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):"
+            "فرمت شماره تلفن نامعتبر است. لطفا یک شماره تلفن معتبر وارد کنید (مثال: 09123456789 یا +989123456789):"
           );
 
           // If we should return to profile view after update
@@ -148,7 +144,7 @@ export function registerUserHandlers(bot: TelegramBot) {
             "studentId",
             msg.text,
             validators.studentId,
-            "Invalid student ID format. Please enter a valid Amirkabir University student ID:"
+            "فرمت شماره دانشجویی نامعتبر است. لطفا یک شماره دانشجویی معتبر دانشگاه امیرکبیر وارد کنید یا اگر دانشجوی امیرکبیر نیستید عدد 0 وارد کنید:"
           );
 
           // If we should return to profile view after update
@@ -167,23 +163,23 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     // Main menu actions
     switch (msg.text) {
-      case "Register for Events":
+      case "ثبت نام در رویدادها":
         await handleRegisterForEvents(bot, msg);
         break;
 
-      case "Event Status":
+      case "وضعیت رویداد":
         bot.emit("check_event_status", msg);
         break;
 
-      case "User Profile":
+      case "پروفایل کاربر":
         bot.emit("view_user_profile", msg);
         break;
 
-      case "Get Group & Channel Links":
+      case "دریافت لینک گروه و کانال":
         bot.emit("get_group_channel_links", msg);
         break;
 
-      case "Go to Admin Panel":
+      case "پنل مدیریت":
         bot.emit("command", {
           ...msg,
           text: "/admin",
@@ -206,11 +202,11 @@ export function registerUserHandlers(bot: TelegramBot) {
 
   // Helper function to build profile message
   const buildProfileMessage = (profile: any) => {
-    let message = `*Your Profile*\n\n`;
-    message += `First Name: ${escapeMarkdown(profile.firstName) ?? ""}\n`;
-    message += `Last Name: ${escapeMarkdown(profile.lastName) ?? ""}\n`;
-    message += `Phone Number: ${profile.phoneNumber ?? ""}\n`;
-    message += `Student ID: ${profile.studentId ?? ""}\n`;
+    let message = `*پروفایل شما*\n\n`;
+    message += `نام: ${escapeMarkdown(profile.firstName) ?? ""}\n`;
+    message += `نام خانوادگی: ${escapeMarkdown(profile.lastName) ?? ""}\n`;
+    message += `شماره تلفن: ${profile.phoneNumber ?? ""}\n`;
+    message += `شماره دانشجویی: ${profile.studentId ?? ""}\n`;
 
     return message;
   };
@@ -224,7 +220,7 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     const profile = await getUserProfile(userId);
     if (!profile) {
-      bot.sendMessage(chatId, "Profile not found.", {
+      bot.sendMessage(chatId, "پروفایل یافت نشد.", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
@@ -268,7 +264,7 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     if (data === "back_to_main") {
       clearUserStates(userId);
-      bot.sendMessage(chatId, "Returning to main menu", {
+      bot.sendMessage(chatId, "بازگشت به منوی اصلی", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
@@ -281,7 +277,7 @@ export function registerUserHandlers(bot: TelegramBot) {
           state: "EDIT_USER_FIRST_NAME",
           data: { returnToProfile: true },
         });
-        bot.sendMessage(chatId, "Please enter your new first name:");
+        bot.sendMessage(chatId, "لطفا نام جدید خود را وارد کنید:");
         break;
 
       case "profile_edit_last_name":
@@ -289,7 +285,7 @@ export function registerUserHandlers(bot: TelegramBot) {
           state: "EDIT_USER_LAST_NAME",
           data: { returnToProfile: true },
         });
-        bot.sendMessage(chatId, "Please enter your new last name:");
+        bot.sendMessage(chatId, "لطفا نام خانوادگی جدید خود را وارد کنید:");
         break;
 
       case "profile_edit_phone":
@@ -297,7 +293,7 @@ export function registerUserHandlers(bot: TelegramBot) {
           state: "EDIT_USER_PROFILE_PHONE",
           data: { returnToProfile: true },
         });
-        bot.sendMessage(chatId, "Please enter your new phone number:");
+        bot.sendMessage(chatId, "لطفا شماره تلفن جدید خود را وارد کنید:");
         break;
 
       case "profile_edit_student_id":
@@ -305,7 +301,10 @@ export function registerUserHandlers(bot: TelegramBot) {
           state: "EDIT_USER_PROFILE_STUDENTID",
           data: { returnToProfile: true },
         });
-        bot.sendMessage(chatId, "Please enter your new student ID:");
+        bot.sendMessage(
+          chatId,
+          "لطفا شماره دانشجویی جدید خود را وارد کنید یا اگر دانشجوی امیرکبیر نیستید عدد 0 وارد کنید:"
+        );
         break;
     }
   });
@@ -321,7 +320,7 @@ export function registerUserHandlers(bot: TelegramBot) {
     const groupLink = process.env.PUBLIC_GROUP_LINK;
     const channelLink = process.env.PUBLIC_CHANNEL_LINK;
 
-    const message = `*Group & Channel Links*\n\n• Group: ${groupLink}\n• Channel: ${channelLink}`;
+    const message = `*لینک‌های گروه و کانال*\n\n گروه: ${groupLink}\n کانال: ${channelLink}`;
     bot.sendMessage(chatId, message, {
       parse_mode: "Markdown",
       reply_markup: getMainMenuKeyboard(userIsAdmin),

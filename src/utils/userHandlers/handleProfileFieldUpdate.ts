@@ -33,12 +33,28 @@ export const handleProfileFieldUpdate = async (
   // Update profile and clear state
   userStates.delete(userId);
   await updateUserProfile(userId, { [field]: value });
-  bot.sendMessage(
-    chatId,
-    `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully!`,
-    {
-      reply_markup: getMainMenuKeyboard(userIsAdmin),
-    }
-  );
+
+  // Translate field name to Persian
+  let persianField = "";
+  switch (field) {
+    case "firstName":
+      persianField = "نام";
+      break;
+    case "lastName":
+      persianField = "نام خانوادگی";
+      break;
+    case "phoneNumber":
+      persianField = "شماره تلفن";
+      break;
+    case "studentId":
+      persianField = "شماره دانشجویی";
+      break;
+    default:
+      persianField = field;
+  }
+
+  bot.sendMessage(chatId, `${persianField} با موفقیت به‌روزرسانی شد!`, {
+    reply_markup: getMainMenuKeyboard(userIsAdmin),
+  });
   return true;
 };

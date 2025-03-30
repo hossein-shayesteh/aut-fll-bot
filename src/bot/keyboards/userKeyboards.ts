@@ -2,6 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { Event } from "../../database/models/Event";
 import { Registration } from "../../database/models/Registration";
 import dotenv from "dotenv";
+import { getRegistrationStatusInPersian } from "../../utils/getRegistrationStatusInPersian";
 
 dotenv.config();
 
@@ -9,13 +10,13 @@ export function getMainMenuKeyboard(
   isUserAdmin: boolean = false
 ): TelegramBot.ReplyKeyboardMarkup {
   const keyboard = [
-    [{ text: "Register for Events" }, { text: "Event Status" }],
-    [{ text: "User Profile" }, { text: "Get Group & Channel Links" }],
+    [{ text: "ثبت نام در رویدادها" }, { text: "وضعیت رویداد" }],
+    [{ text: "پروفایل کاربر" }, { text: "دریافت لینک گروه و کانال" }],
   ];
 
   // Add admin panel button if user is an admin
   if (isUserAdmin) {
-    keyboard.push([{ text: "Go to Admin Panel" }]);
+    keyboard.push([{ text: "پنل مدیریت" }]);
   }
 
   return {
@@ -27,7 +28,7 @@ export function getMainMenuKeyboard(
 
 export function getCancelKeyboard(): TelegramBot.ReplyKeyboardMarkup {
   return {
-    keyboard: [[{ text: "Cancel" }]],
+    keyboard: [[{ text: "لغو" }]],
     resize_keyboard: true,
     one_time_keyboard: false,
   };
@@ -51,8 +52,8 @@ export function getEventDetailsKeyboard(
   return {
     inline_keyboard: [
       [
-        { text: "Register", callback_data: `register_${eventId}` },
-        { text: "Back to Events", callback_data: "back_to_events" },
+        { text: "ثبت نام", callback_data: `register_${eventId}` },
+        { text: "بازگشت به رویدادها", callback_data: "back_to_events" },
       ],
     ],
   };
@@ -64,8 +65,8 @@ export function getRegistrationApprovalKeyboard(
   return {
     inline_keyboard: [
       [
-        { text: "✅ Approve", callback_data: `approve_${registrationId}` },
-        { text: "❌ Reject", callback_data: `reject_${registrationId}` },
+        { text: "✅ تایید", callback_data: `approve_${registrationId}` },
+        { text: "❌ رد", callback_data: `reject_${registrationId}` },
       ],
     ],
   };
@@ -90,7 +91,9 @@ export function getUserRegistrationsKeyboard(
   const keyboard = currentPageItems.map((registration) => {
     return [
       {
-        text: `${registration.event.name} (${registration.status})`,
+        text: `${registration.event.name} (${getRegistrationStatusInPersian(
+          registration.status
+        )})`,
         callback_data: `view_registration_${registration.id}`,
       },
     ];
@@ -137,7 +140,7 @@ export function getRegistrationDetailsKeyboard(
     inline_keyboard: [
       [
         {
-          text: "Cancel Registration",
+          text: "لغو ثبت نام",
           callback_data: `cancel_registration_${registration.id}`,
         },
       ],
@@ -152,7 +155,7 @@ export function getFeedbackSubmissionKeyboard(
     inline_keyboard: [
       [
         {
-          text: "Submit Feedback",
+          text: "ارسال بازخورد",
           callback_data: `feedback_${registration.event.id}`,
         },
       ],
@@ -166,8 +169,8 @@ export function getAddCommentKeyboard(
   return {
     inline_keyboard: [
       [
-        { text: "Add Comment", callback_data: `comment_${eventId}` },
-        { text: "No, Thanks", callback_data: "back_to_events" },
+        { text: "افزودن نظر", callback_data: `comment_${eventId}` },
+        { text: "نه، ممنون", callback_data: "back_to_events" },
       ],
     ],
   };
@@ -180,10 +183,10 @@ export function getChangeFeedbackKeyboard(
     inline_keyboard: [
       [
         {
-          text: "Yes, change my rating",
+          text: "بله، امتیاز من را تغییر بده",
           callback_data: `change_rating_${eventId}`,
         },
-        { text: "No, keep it", callback_data: "back_to_events" },
+        { text: "نه، همین خوبه", callback_data: "back_to_events" },
       ],
     ],
   };
@@ -209,12 +212,18 @@ export function getUserEditProfileKeyboard(): TelegramBot.InlineKeyboardMarkup {
   return {
     inline_keyboard: [
       [
-        { text: "Edit First Name", callback_data: "profile_edit_first_name" },
-        { text: "Edit Last Name", callback_data: "profile_edit_last_name" },
+        { text: "ویرایش نام", callback_data: "profile_edit_first_name" },
+        {
+          text: "ویرایش نام خانوادگی",
+          callback_data: "profile_edit_last_name",
+        },
       ],
       [
-        { text: "Edit Phone Number", callback_data: "profile_edit_phone" },
-        { text: "Edit Student ID", callback_data: "profile_edit_student_id" },
+        { text: "ویرایش شماره تلفن", callback_data: "profile_edit_phone" },
+        {
+          text: "ویرایش شماره دانشجویی",
+          callback_data: "profile_edit_student_id",
+        },
       ],
     ],
   };

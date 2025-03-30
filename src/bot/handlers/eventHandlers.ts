@@ -47,6 +47,9 @@ import { escapeMarkdown } from "../../utils/escapeMarkdown";
 import { generateExcelFile } from "../../utils/adminHandlers/generateExcelFile";
 import { getEventStatusIcon } from "../../utils/getEventStatusIcon";
 import { isAdminUser } from "../../middlewares/authMiddleware";
+import { formatCurrency } from "../../utils/eventHandlers/formatCurrency";
+import { getRegistrationStatusInPersian } from "../../utils/getRegistrationStatusInPersian";
+import { getEventStatusInPersian } from "../../utils/getEventStatusInPersian";
 
 dotenv.config();
 
@@ -83,14 +86,14 @@ export function registerEventHandlers(bot: TelegramBot) {
 
     const registrations = await getUserRegistrations(userId);
     if (registrations.length === 0) {
-      bot.sendMessage(chatId, "You have not registered for any events.", {
+      bot.sendMessage(chatId, "شما در هیچ رویدادی ثبت‌نام نکرده‌اید.", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
     }
 
     // Show a list of the user's registrations with pagination (page 0 = first page)
-    bot.sendMessage(chatId, "Your event registrations:", {
+    bot.sendMessage(chatId, "رویدادهای شما:", {
       reply_markup: getUserRegistrationsKeyboard(registrations, 0),
     });
   });
@@ -111,7 +114,7 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       const event = await getEventById(eventId);
       if (!event) {
-        bot.answerCallbackQuery(query.id, { text: "Event not found." });
+        bot.answerCallbackQuery(query.id, { text: "رویداد یافت نشد." });
         return;
       }
 
@@ -120,17 +123,24 @@ export function registerEventHandlers(bot: TelegramBot) {
       // Determine which fee to display
       const applicableFee = await getApplicableFee(eventId, userId);
 
+      const eventData = new Intl.DateTimeFormat("fa-IR", {
+        dateStyle: "full",
+        timeStyle: "short",
+      }).format(event.eventDate);
+
       // TODO: Convert and display eventDate in Jalali calendar
       // Show event details
-      let textMessage = `*Event Details*\n\n`;
+      let textMessage = `*جزئیات رویداد*\n\n`;
       textMessage += `*${escapeMarkdown(event.name)}*\n`;
       textMessage += `${escapeMarkdown(event.description)}\n`;
-      textMessage += `Date: ${event.eventDate.toLocaleString()}\n`;
-      textMessage += `Location: ${event.location ?? "N/A"}\n`;
+      textMessage += `تاریخ: ${eventData}\n`;
+      textMessage += `مکان: ${event.location ?? "نامشخصص"}\n`;
       if (userProfile?.studentId)
-        textMessage += `Fee: ${applicableFee} toman\n`;
-      textMessage += `Capacity: ${event.capacity}\n`;
-      textMessage += `Status: ${getEventStatusIcon(event)} ${event.status}\n`;
+        textMessage += `هزینه: ${formatCurrency(applicableFee)} تومان\n`;
+      textMessage += `ظرفیت: ${event.capacity.toLocaleString("fa-IR")}\n`;
+      textMessage += `وضعیت: ${getEventStatusInPersian(
+        event.status
+      )} ${getEventStatusIcon(event)}\n`;
 
       await bot.editMessageText(textMessage, {
         chat_id: chatId,
@@ -152,7 +162,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       // Check if event has capacity before starting registration
       const hasCapacity = await checkEventCapacity(eventId);
       if (!hasCapacity) {
-        bot.sendMessage(chatId, "Sorry, this event is already full.", {
+        bot.sendMessage(chatId, "متأسفیم، این رویداد قبلاً پر شده است.", {
           reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
         bot.answerCallbackQuery(query.id);
@@ -164,7 +174,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       if (existingReg && existingReg.status === RegistrationStatus.APPROVED) {
         bot.sendMessage(
           chatId,
-          "You are already registered and approved for this event.",
+          "شما قبلاً در این رویداد ثبت‌نام کرده‌اید و تأیید شده‌اید.",
           { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
         bot.answerCallbackQuery(query.id);
@@ -179,7 +189,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           eventId,
           step: "collect_first_name",
         });
-        bot.sendMessage(chatId, "Please enter your *First Name*:", {
+        bot.sendMessage(chatId, "لطفاً *نام* خود را وارد کنید:", {
           parse_mode: "Markdown",
           reply_markup: getCancelKeyboard(),
         });
@@ -191,12 +201,12 @@ export function registerEventHandlers(bot: TelegramBot) {
       // ask if they want to confirm using that info or enter new info
       if (userProfile.isRegistered) {
         const previewMsg =
-          `Your current profile info:\n` +
-          `• First Name: ${userProfile.firstName}\n` +
-          `• Last Name: ${userProfile.lastName}\n` +
-          `• Phone Number: ${userProfile.phoneNumber}\n` +
-          `• Student ID: ${userProfile.studentId}\n\n` +
-          `Do you want to use this info?`;
+          `اطلاعات پروفایل فعلی شما:\n` +
+          `• نام: ${userProfile.firstName}\n` +
+          `• نام خانوادگی: ${userProfile.lastName}\n` +
+          `• شماره تلفن: ${userProfile.phoneNumber}\n` +
+          `• شماره دانشجویی: ${userProfile.studentId}\n\n` +
+          `آیا می‌خواهید از این اطلاعات استفاده کنید؟`;
 
         // Save the user’s existing info in the registration state so we can keep track
         registrationStates.set(userId, {
@@ -212,8 +222,11 @@ export function registerEventHandlers(bot: TelegramBot) {
         bot.sendMessage(chatId, previewMsg, {
           reply_markup: {
             keyboard: [
-              [{ text: "Yes, use this info" }, { text: "No, update my info" }],
-              [{ text: "Cancel" }],
+              [
+                { text: "بله، از این اطلاعات استفاده کن" },
+                { text: "خیر، اطلاعات من را به‌روز کن" },
+              ],
+              [{ text: "لغو" }],
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
@@ -225,7 +238,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           eventId,
           step: "collect_first_name",
         });
-        bot.sendMessage(chatId, "Please enter your *First Name*:", {
+        bot.sendMessage(chatId, "لطفاً *نام* خود را وارد کنید:", {
           parse_mode: "Markdown",
           reply_markup: getCancelKeyboard(),
         });
@@ -247,7 +260,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const regId = parseInt(query.data.replace("view_registration_", ""), 10);
       const registration = await getRegistrationById(regId);
       if (!registration) {
-        bot.answerCallbackQuery(query.id, { text: "Registration not found." });
+        bot.answerCallbackQuery(query.id, { text: "ثبت‌نام یافت نشد." });
         return;
       }
 
@@ -258,17 +271,24 @@ export function registerEventHandlers(bot: TelegramBot) {
       const isRegistrationApproved =
         registration.status === RegistrationStatus.APPROVED;
 
-      let message = `*Registration Details*\n\n`;
-      message += `Event: ${escapeMarkdown(registration.event.name)}\n`;
-      message += `Status: ${registration.status}\n`;
-      message += `Date: ${registration.registrationDate.toLocaleString()}\n`;
+      const registrationDate = new Intl.DateTimeFormat("fa-IR", {
+        dateStyle: "full",
+        timeStyle: "short",
+      }).format(registration.registrationDate);
+
+      let message = `*جزئیات ثبت‌نام*\n\n`;
+      message += `رویداد: ${escapeMarkdown(registration.event.name)}\n`;
+      message += `وضعیت: ${getRegistrationStatusInPersian(
+        registration.status
+      )}\n`;
+      message += `تاریخ: ${registrationDate}\n`;
 
       if (isEventCancelled) {
-        message += `\n⚠️ *Important: This event has been cancelled.*`;
+        message += `\n⚠️ *مهم: این رویداد لغو شده است.*`;
       } else if (isEventCompleted) {
-        message += `\n✅ This event has been completed.`;
+        message += `\n✅ این رویداد به پایان رسیده است.`;
       } else if (isRegistrationApproved) {
-        message += `\n🎉 Your registration is approved!`;
+        message += `\n🎉 ثبت‌نام شما تأیید شده است!`;
       }
 
       let replyMarkup;
@@ -302,12 +322,12 @@ export function registerEventHandlers(bot: TelegramBot) {
         // User has already submitted feedback, show it and ask if they want to change
         const stars = "⭐".repeat(existingFeedback.rating);
 
-        let message = `You have already rated this event ${stars} (${existingFeedback.rating}/5)`;
+        let message = `شما قبلاً به این رویداد ${stars} (${existingFeedback.rating}/5) امتیاز داده‌اید`;
         if (existingFeedback.comment)
-          message += `\n\nYour comment: "${escapeMarkdown(
+          message += `\n\nنظر شما: "${escapeMarkdown(
             existingFeedback.comment
           )}"`;
-        message += "\n\nWould you like to change your feedback?";
+        message += "\n\nآیا می‌خواهید بازخورد خود را تغییر دهید؟";
 
         bot.editMessageText(message, {
           chat_id: chatId,
@@ -317,11 +337,14 @@ export function registerEventHandlers(bot: TelegramBot) {
         });
       } else {
         // User hasn't submitted feedback yet, show rating options
-        bot.editMessageText("Please rate your experience for this event:", {
-          chat_id: chatId,
-          message_id: messageId,
-          reply_markup: getFeedbackRatingKeyboard(eventId),
-        });
+        bot.editMessageText(
+          "لطفاً تجربه خود را برای این رویداد ارزیابی کنید:",
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            reply_markup: getFeedbackRatingKeyboard(eventId),
+          }
+        );
       }
 
       bot.answerCallbackQuery(query.id);
@@ -330,11 +353,14 @@ export function registerEventHandlers(bot: TelegramBot) {
     else if (query.data.startsWith("change_rating_")) {
       const eventId = parseInt(query.data.replace("change_rating_", ""), 10);
 
-      bot.editMessageText("Please select your new rating for this event:", {
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: getFeedbackRatingKeyboard(eventId),
-      });
+      bot.editMessageText(
+        "لطفا امتیاز جدید خود را برای این رویداد انتخاب کنید:",
+        {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: getFeedbackRatingKeyboard(eventId),
+        }
+      );
 
       bot.answerCallbackQuery(query.id);
     }
@@ -349,7 +375,7 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       // Ask for optional comment
       bot.editMessageText(
-        `Thank you for your ${rating}-star rating! Would you like to add a comment?`,
+        `با تشکر از امتیاز ${rating} ستاره‌ای شما! آیا می‌خواهید نظری اضافه کنید؟`,
         {
           chat_id: chatId,
           message_id: messageId,
@@ -369,7 +395,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         step: "collect_feedback_comment",
       });
 
-      bot.sendMessage(chatId, "Please type your feedback comment:", {
+      bot.sendMessage(chatId, "لطفا کامنت خود را وارد کنید:", {
         reply_markup: getCancelKeyboard(),
       });
 
@@ -392,7 +418,7 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       const success = await cancelRegistration(userId, registration.eventId);
       if (success) {
-        bot.editMessageText("Registration cancelled successfully.", {
+        bot.editMessageText("ثبت‌نام با موفقیت لغو شد.", {
           chat_id: chatId,
           message_id: messageId,
           parse_mode: "Markdown",
@@ -430,6 +456,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         });
       }
     }
+
     // 6. Handling admin's "Approve"/"Reject" from the admin group inline button
     else if (query.data.startsWith("approve_")) {
       const regId = parseInt(query.data.replace("approve_", ""), 10);
@@ -459,7 +486,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const registrations = await getUserRegistrations(userId);
 
       // Update the message with the new page
-      await bot.editMessageText("Your event registrations:", {
+      await bot.editMessageText("رویدادهای شما:", {
         reply_markup: getUserRegistrationsKeyboard(registrations, pageNumber),
         chat_id: chatId,
         message_id: messageId,
@@ -529,9 +556,9 @@ export function registerEventHandlers(bot: TelegramBot) {
     if (!msg.text && !msg.photo) return;
 
     // If user typed "Cancel", we handle that in userHandlers or globally
-    if (msg.text && msg.text.toLowerCase() === "cancel") {
+    if (msg.text && msg.text.toLowerCase() === "لغو") {
       registrationStates.delete(userId);
-      bot.sendMessage(chatId, "Registration cancelled.", {
+      bot.sendMessage(chatId, "ثبت‌نام لغو شد.", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
       return;
@@ -541,21 +568,21 @@ export function registerEventHandlers(bot: TelegramBot) {
     switch (state.step) {
       // 1. If we are confirming existing info
       case "confirm_existing_profile":
-        if (msg.text === "Yes, use this info") {
+        if (msg.text === "بله، از این اطلاعات استفاده کن") {
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
           const applicableFee = await getApplicableFee(state.eventId, userId);
           bot.sendMessage(chatId, getPaymentInstructions(applicableFee), {
             reply_markup: getCancelKeyboard(),
           });
-        } else if (msg.text === "No, update my info") {
+        } else if (msg.text === "خیر، اطلاعات من را به‌روز کن") {
           // Move to normal flow
           moveToNextRegistrationStep(
             bot,
             chatId,
             state,
             "collect_first_name",
-            "Please enter your *First Name*:"
+            "لطفاً *نام* خود را وارد کنید:"
           );
         }
         break;
@@ -568,7 +595,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           chatId,
           state,
           "collect_last_name",
-          "Please enter your *Last Name*:"
+          "لطفاً *نام خانوادگی* خود را وارد کنید:"
         );
         break;
 
@@ -579,7 +606,7 @@ export function registerEventHandlers(bot: TelegramBot) {
           chatId,
           state,
           "collect_phone_number",
-          "Please enter your *Phone Number* (with country code if applicable):"
+          "لطفاً *شماره تلفن* خود را وارد کنید:"
         );
         break;
 
@@ -590,9 +617,9 @@ export function registerEventHandlers(bot: TelegramBot) {
           msg,
           state,
           validators.phoneNumber,
-          "Invalid phone number format. Please enter a valid Iranian phone number (e.g., 09123456789 or +989123456789):",
+          "شماره تلفن نامعتبر است. لطفاً یک شماره تلفن معتبر وارد کنید (مثال: 09123456789 یا +989123456789):",
           "collect_student_id",
-          "Please enter your *Student ID* if you are a university student, or enter *0* if you are not:",
+          "لطفا *شماره دانشجویی* خود را وارد کنید یا اگر دانشجوی امیرکبیر نیستید عدد 0 وارد کنید:",
           "phoneNumber"
         );
         if (!phoneValidated) return;
@@ -603,7 +630,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         if (!msg.text) {
           bot.sendMessage(
             chatId,
-            "Please enter your student ID or '0' if you're not a student:",
+            "لطفا *شماره دانشجویی* خود را وارد کنید یا اگر دانشجوی امیرکبیر نیستید عدد 0 وارد کنید:",
             {
               reply_markup: getCancelKeyboard(),
             }
@@ -615,7 +642,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         if (msg.text !== "0" && !validators.studentId(msg.text)) {
           bot.sendMessage(
             chatId,
-            "Invalid student ID format. Please enter a valid Amirkabir University student ID or '0' if you're not a student:",
+            "فرمت شماره دانشجویی نامعتبر است. لطفاً یک شماره دانشجویی معتبر دانشگاه امیرکبیر وارد کنید یا اگر دانشجو نیستید '0' وارد کنید:",
             {
               reply_markup: getCancelKeyboard(),
             }
@@ -645,7 +672,7 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       case "collect_feedback_comment":
         if (!msg.text) {
-          bot.sendMessage(chatId, "Please enter a text comment:", {
+          bot.sendMessage(chatId, "لطفاً کامنت خود را وارد کنید:", {
             reply_markup: getCancelKeyboard(),
           });
           return;
@@ -654,13 +681,9 @@ export function registerEventHandlers(bot: TelegramBot) {
         // Save the comment to the database using the new helper function
         await updateFeedbackComment(userId, state.eventId, msg.text);
 
-        bot.sendMessage(
-          chatId,
-          "Thank you for your feedback! Your comment has been recorded.",
-          {
-            reply_markup: getMainMenuKeyboard(userIsAdmin),
-          }
-        );
+        bot.sendMessage(chatId, "با تشکر از بازخورد شما! نظر شما ثبت شد.", {
+          reply_markup: getMainMenuKeyboard(userIsAdmin),
+        });
 
         registrationStates.delete(userId);
         break;
@@ -683,7 +706,10 @@ export function registerEventHandlers(bot: TelegramBot) {
     // The largest photo is the last in the array
     const photo = msg.photo?.[msg.photo.length - 1];
     if (!photo?.file_id) {
-      bot.sendMessage(chatId, "Could not process the image. Please try again.");
+      bot.sendMessage(
+        chatId,
+        "امکان پردازش تصویر وجود ندارد. لطفاً دوباره تلاش کنید."
+      );
       return;
     }
 
@@ -715,24 +741,24 @@ export function registerEventHandlers(bot: TelegramBot) {
         // Already approved for this event
         bot.sendMessage(
           chatId,
-          "You are already registered and approved for this event.",
+          "شما قبلاً در این رویداد ثبت‌نام کرده‌اید و تأیید شده‌اید.",
           { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
       } else if (!isFull) {
         // Probably some other error (e.g., DB error)
         bot.sendMessage(
           chatId,
-          "Failed to register. The event may be full or an error occurred.",
+          "ثبت‌نام با شکست مواجه شد. ممکن است رویداد پر شده باشد یا خطایی رخ داده باشد.",
           { reply_markup: getMainMenuKeyboard(userIsAdmin) }
         );
       } else {
         // isFull === true => event capacity is reached
-        bot.sendMessage(chatId, "Sorry, this event is already full.", {
+        bot.sendMessage(chatId, "متأسفیم، این رویداد قبلاً پر شده است.", {
           reply_markup: getMainMenuKeyboard(userIsAdmin),
         });
       }
 
-      // Clear user’s registration flow
+      // Clear user's registration flow
       registrationStates.delete(userId);
       return;
     }
@@ -770,7 +796,7 @@ export function registerEventHandlers(bot: TelegramBot) {
     // 4) Confirm to user
     bot.sendMessage(
       chatId,
-      "Your registration request has been submitted and is awaiting admin approval.",
+      "درخواست ثبت‌نام شما ثبت شده و در انتظار تأیید مدیر است.",
       {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       }

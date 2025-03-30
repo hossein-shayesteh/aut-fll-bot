@@ -3,7 +3,7 @@ import { getMainMenuKeyboard } from "../../bot/keyboards/userKeyboards";
 import { getFullAndActiveEvents } from "../../services/eventService";
 import { isAdminUser } from "../../middlewares/authMiddleware";
 
-// Helper function for “Register for Events”
+// Helper function for "Register for Events"
 export const handleRegisterForEvents = async (
   bot: TelegramBot,
   msg: TelegramBot.Message | undefined
@@ -14,12 +14,12 @@ export const handleRegisterForEvents = async (
 
   const userIsAdmin = await isAdminUser(userId);
 
-  // Get only active and full  events
+  // Get only active and full events
   const events = await getFullAndActiveEvents();
 
   if (events.length === 0) {
     if (chatId)
-      bot.sendMessage(chatId, "No upcoming events at the moment.", {
+      bot.sendMessage(chatId, "در حال حاضر هیچ رویداد آتی وجود ندارد.", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
     return;
@@ -34,7 +34,7 @@ export const handleRegisterForEvents = async (
   ]);
 
   if (chatId)
-    bot.sendMessage(chatId, "Select an event to register:", {
+    bot.sendMessage(chatId, "یک رویداد را برای ثبت‌نام انتخاب کنید:", {
       reply_markup: {
         inline_keyboard: inlineKeyboard,
       },

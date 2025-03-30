@@ -1,8 +1,12 @@
-// Helper functions
-export const getPaymentInstructions = (fee: number | string) => {
+import { formatCurrency } from "./formatCurrency";
+
+export const getPaymentInstructions = (fee: number) => {
   const paymentInfo =
     process.env.PAYMENT_CARD_NUMBER ||
-    "Please contact admin for payment details";
+    "لطفا برای جزئیات پرداخت با پشتیبانی تماس بگیرید";
   const [cardNumber, cardOwner] = paymentInfo.split(",");
-  return `Please pay ${fee} to:\nCard Number: ${cardNumber}\nCard Owner: ${cardOwner}\nAfter payment, upload your payment receipt image:`;
+  // Format the fee using the helper function
+  const formattedFee = formatCurrency(fee);
+
+  return `لطفا مبلغ ${formattedFee} تومان را به حساب زیر واریز کنید:\nشماره کارت: ${cardNumber}\nصاحب کارت: ${cardOwner}\nپس از پرداخت، تصویر رسید پرداخت خود را آپلود کنید:`;
 };

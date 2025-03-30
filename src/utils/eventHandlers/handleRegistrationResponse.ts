@@ -23,12 +23,11 @@ export const handleRegistrationResponse = async (
     // Notify the user about the status change
     const userChatId = registration.user.telegramId;
     const statusEmoji = status === RegistrationStatus.APPROVED ? "🎉" : "❌";
-    const statusText =
-      status === RegistrationStatus.APPROVED ? "approved" : "rejected";
+    const statusText = status === RegistrationStatus.APPROVED ? "تأیید" : "رد";
 
     bot.sendMessage(
       userChatId,
-      `${statusEmoji} Your registration for the event "${registration.event.name}" has been ${statusText}.`
+      `${statusEmoji} ثبت‌نام شما برای رویداد "${registration.event.name}" ${statusText} شد.`
     );
 
     // Edit the message in the admin group

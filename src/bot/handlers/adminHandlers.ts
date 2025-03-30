@@ -65,7 +65,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
   });
 
   // Admin menu handler
-  bot.onText(/Admin Panel/, (msg) => {
+  bot.onText(/پنل مدیریت/, (msg) => {
     const chatId = msg.chat.id;
     const userId = msg.from?.id;
 
@@ -427,11 +427,17 @@ export function registerAdminHandlers(bot: TelegramBot) {
       for (const reg of approvedRegistrants) {
         try {
           // Send notification to user
+          // Send notification to user
           await bot.sendMessage(
             reg.user.telegramId,
-            `⚠️ *Event Cancelled* ⚠️\n\nThe event "${escapeMarkdown(
+            `⚠️ *رویداد لغو شد* ⚠️\n\nرویداد "${escapeMarkdown(
               updatedEvent.name
-            )}" scheduled for ${updatedEvent.eventDate.toLocaleString()} has been cancelled.`,
+            )}" که برای تاریخ ${new Intl.DateTimeFormat("fa-IR", {
+              dateStyle: "full",
+              timeStyle: "short",
+            }).format(
+              updatedEvent.eventDate
+            )} برنامه‌ریزی شده بود، لغو شده است.`,
             { parse_mode: "Markdown" }
           );
 
@@ -1009,7 +1015,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
           try {
             await bot.sendMessage(
               reg.user.telegramId,
-              `*📢 Notification for event "${escapeMarkdown(
+              `*📢 اطلاعیه برای رویداد "${escapeMarkdown(
                 event.name
               )}"*\n\n${text}`,
               { parse_mode: "Markdown" }
