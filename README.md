@@ -31,36 +31,64 @@ For detailed instructions on how to use the bot:
 
 1. **Clone the repository**:
 
-   ```bash
-   git clone https://github.com/yourusername/telegram-event-bot.git
-   ```
+```bash
+git clone https://github.com/yourusername/telegram-event-bot.git
+
+```
 
 2. **Install dependencies**:
 
-   ```bash
-   cd telegram-event-bot
-   npm install
-   ```
+```bash
+cd telegram-event-bot
 
-3. **Install dependencies**:
+npm install
 
-   ```bash
-    DATABASE_PATH=./database.sqlite
-    NODE_ENV=development
-    TELEGRAM_TOKEN=your_telegram_bot_token
-    BOT_ID=bot_id
-    ADMIN_USER_IDS=admin_ids
-    ADMIN_GROUP_ID=admin_group_id
-    PUBLIC_GROUP_LINK=public_group_link
-    PUBLIC_CHANNEL_LINK=public_channel_link
-   ```
+```
+
+1. **Configure environment variables**:
+   Create a .env file in the root directory with the following variables:
+
+```bash
+# SQLite database file path
+DATABASE_PATH=./database.sqlite
+
+# Node environment
+NODE_ENV=development
+
+# Telegram Bot Token
+TELEGRAM_TOKEN=your_telegram_bot_token
+
+# Bot ID
+BOT_ID=your_bot_id
+
+# Comma-separated admin user IDs (Telegram user IDs)
+ADMIN_USER_IDS=admin_id_1,admin_id_2,admin_id_3
+
+# Admin group ID
+ADMIN_GROUP_ID=your_admin_group_id
+
+# Public Group Link
+PUBLIC_GROUP_LINK=https://t.me/your_public_group
+
+# Public Channel Link
+PUBLIC_CHANNEL_LINK=https://t.me/your_public_channel
+
+# Payment Card Number
+PAYMENT_CARD_NUMBER=card_number,card_holder_name
+
+# Second Payment Card Number
+SECOND_PAYMENT_CARD_NUMBER=card_number,card_holder_name
+
+```
 
 4. **Run the bot**:
 
-   ```bash
-   npm run build
-   npm run start
-   ```
+```bash
+npm run build
+
+npm run start
+
+```
 
 ## Technologies Used
 
