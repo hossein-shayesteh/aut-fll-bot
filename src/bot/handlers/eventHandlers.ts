@@ -130,9 +130,8 @@ export function registerEventHandlers(bot: TelegramBot) {
 
       // TODO: Convert and display eventDate in Jalali calendar
       // Show event details
-      let textMessage = `*جزئیات رویداد*\n\n`;
-      textMessage += `*${escapeMarkdown(event.name)}*\n`;
-      textMessage += `${escapeMarkdown(event.description)}\n`;
+      let textMessage = `*${escapeMarkdown(event.name)}*\n`;
+      textMessage += `${escapeMarkdown(event.description)}\n\n`;
       textMessage += `تاریخ: ${eventData}\n`;
       textMessage += `مکان: ${event.location ?? "نامشخصص"}\n`;
       if (userProfile?.studentId)
