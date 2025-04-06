@@ -135,7 +135,11 @@ export function registerEventHandlers(bot: TelegramBot) {
       textMessage += `تاریخ: ${eventData}\n`;
       textMessage += `مکان: ${event.location ?? "نامشخصص"}\n`;
       if (userProfile?.studentId)
-        textMessage += `هزینه: ${formatCurrency(applicableFee)} تومان\n`;
+        textMessage += `هزینه: ${
+          applicableFee === 0
+            ? "رایگان"
+            : `${formatCurrency(applicableFee)} تومان`
+        } \n`;
       textMessage += `ظرفیت: ${event.capacity.toLocaleString("fa-IR")}\n`;
       textMessage += `وضعیت: ${getEventStatusInPersian(
         event.status
@@ -439,9 +443,9 @@ export function registerEventHandlers(bot: TelegramBot) {
             registration.user.phoneNumber ?? "N/A"
           }\nStudent ID: ${
             registration.user.studentId ?? "N/A"
-          }\n\nEvent: "${escapeMarkdown(
-            registration.event.name
-          )}"\nFee: ${applicableFee}\nPrevious Status: ${
+          }\n\nEvent: "${escapeMarkdown(registration.event.name)}"\nFee: ${
+            applicableFee === 0 ? "free" : applicableFee
+          }\nPrevious Status: ${
             registration.status
           }\n\nPlease process a refund if applicable.`,
           {
@@ -568,6 +572,81 @@ export function registerEventHandlers(bot: TelegramBot) {
       // 1. If we are confirming existing info
       case "confirm_existing_profile":
         if (msg.text === "بله، از این اطلاعات استفاده کن") {
+          // Check if the event is free
+          const event = await getEventById(state.eventId);
+          if (event && event.fee === 0) {
+            // For free events, skip payment and auto-approve
+
+            // 1) Create registration in DB with approved status
+            const registration = await createRegistration(
+              userId,
+              state.eventId
+            );
+
+            if (!registration) {
+              // Check if user is already approved for this event
+              const existingReg = await getRegistrationByUserAndEvent(
+                userId,
+                state.eventId
+              );
+
+              if (
+                existingReg &&
+                existingReg.status === RegistrationStatus.APPROVED
+              ) {
+                // Already approved for this event
+                bot.sendMessage(
+                  chatId,
+                  "شما قبلاً در این رویداد ثبت‌نام کرده‌اید و تأیید شده‌اید.",
+                  { reply_markup: getMainMenuKeyboard(userIsAdmin) }
+                );
+              } else {
+                // Probably some other error (e.g., DB error)
+                bot.sendMessage(
+                  chatId,
+                  "ثبت‌نام با شکست مواجه شد. ممکن است رویداد پر شده باشد یا خطایی رخ داده باشد.",
+                  { reply_markup: getMainMenuKeyboard(userIsAdmin) }
+                );
+              }
+            } else {
+              await updateRegistration(registration.id, {
+                status: RegistrationStatus.APPROVED,
+              });
+
+              // 2) Confirm to user
+              bot.sendMessage(
+                chatId,
+                "ثبت‌نام شما برای این رویداد با موفقیت انجام شد!",
+                {
+                  reply_markup: getMainMenuKeyboard(userIsAdmin),
+                }
+              );
+
+              // Notify admin group about the free registration
+              try {
+                await sendMessageInTopic(
+                  bot,
+                  ADMIN_GROUP_ID,
+                  event?.name || "",
+                  `✅ *Free Event Registration*\n\nName: ${state.firstName} ${
+                    state.lastName
+                  }\nPhone: ${state.phoneNumber}\nStudent ID: ${
+                    state.studentId || "None"
+                  }\nEvent: "${escapeMarkdown(
+                    event.name
+                  )}"\n\nThis registration was automatically approved as the event is free.`,
+                  {
+                    parse_mode: "Markdown",
+                  }
+                );
+              } catch (error) {}
+            }
+
+            // Clear state
+            registrationStates.delete(userId);
+            return;
+          }
+
           // Jump directly to collecting the receipt image
           state.step = "collect_receipt_image";
           const applicableFee = await getApplicableFee(state.eventId, userId);
@@ -707,7 +786,7 @@ export function registerEventHandlers(bot: TelegramBot) {
             // 3) Confirm to user
             bot.sendMessage(
               chatId,
-              "ثبت‌نام شما برای این رویداد رایگان با موفقیت انجام شد!",
+              "ثبت‌نام شما برای این رویداد با موفقیت انجام شد!",
               {
                 reply_markup: getMainMenuKeyboard(userIsAdmin),
               }

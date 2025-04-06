@@ -697,12 +697,16 @@ export function registerAdminHandlers(bot: TelegramBot) {
       userState.data.capacity = capacity;
       userState.state = "CREATE_EVENT_FEE";
 
-      bot.sendMessage(chatId, "Enter the event fee:", {
-        reply_markup: {
-          keyboard: [[{ text: "Cancel" }]],
-          resize_keyboard: true,
-        },
-      });
+      bot.sendMessage(
+        chatId,
+        "Enter the event fee (enter 0 if the event is free):",
+        {
+          reply_markup: {
+            keyboard: [[{ text: "Cancel" }]],
+            resize_keyboard: true,
+          },
+        }
+      );
     } else if (userState.state === "CREATE_EVENT_FEE") {
       const fee = parseFloat(text);
 
