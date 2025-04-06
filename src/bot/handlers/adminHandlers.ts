@@ -436,7 +436,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
             `⚠️ *رویداد لغو شد* ⚠️\n\nرویداد "${escapeMarkdown(
               updatedEvent.name
             )}" که برای تاریخ ${new Intl.DateTimeFormat("fa-IR", {
-              dateStyle: "medium",
+              dateStyle: "long",
               timeStyle: "short",
             }).format(
               updatedEvent.eventDate
@@ -837,7 +837,7 @@ export function registerAdminHandlers(bot: TelegramBot) {
                 )}*\n${escapeMarkdown(
                   event.description
                 )}\n\nتاریخ: ${new Intl.DateTimeFormat("fa-IR", {
-                  dateStyle: "medium",
+                  dateStyle: "long",
                   timeStyle: "short",
                 }).format(
                   event.eventDate

@@ -124,7 +124,7 @@ export function registerEventHandlers(bot: TelegramBot) {
       const applicableFee = await getApplicableFee(eventId, userId);
 
       const eventData = new Intl.DateTimeFormat("fa-IR", {
-        dateStyle: "medium",
+        dateStyle: "long",
         timeStyle: "short",
       }).format(event.eventDate);
 
@@ -271,7 +271,7 @@ export function registerEventHandlers(bot: TelegramBot) {
         registration.status === RegistrationStatus.APPROVED;
 
       const registrationDate = new Intl.DateTimeFormat("fa-IR", {
-        dateStyle: "medium",
+        dateStyle: "long",
         timeStyle: "short",
       }).format(registration.registrationDate);
 

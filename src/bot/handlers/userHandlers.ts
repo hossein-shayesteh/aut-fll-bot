@@ -220,7 +220,7 @@ export function registerUserHandlers(bot: TelegramBot) {
     message += `شماره تلفن: ${profile.phoneNumber ?? ""}\n`;
     message += `شماره دانشجویی: ${profile.studentId ?? ""}\n`;
     message += `وضعیت اعلان‌ها: ${
-      profile.notificationsEnabled ? "🔔 فعال" : "🔕 غیرفعال"
+      profile.notificationsEnabled ? "فعال 🔔" : "غیرفعال 🔕"
     }\n`;
 
     return message;
@@ -301,15 +301,15 @@ export function registerUserHandlers(bot: TelegramBot) {
 
       // Send confirmation message
       const message = newNotificationStatus
-        ? "اعلان‌های رویدادها با موفقیت فعال شد. 🔔 از این پس، از رویدادهای جدید مطلع خواهید شد."
-        : "اعلان‌های رویدادها غیرفعال شد. 🔕 دیگر اعلانی برای رویدادهای جدید دریافت نخواهید کرد.";
+        ? "اعلان‌ رویدادها با موفقیت فعال شد. 🔔 از این پس، از رویدادهای جدید مطلع خواهید شد."
+        : "اعلان‌ رویدادها غیرفعال شد. 🔕 دیگر اعلانی برای رویدادهای جدید دریافت نخواهید کرد.";
 
-      bot.sendMessage(chatId, message);
+      await bot.sendMessage(chatId, message);
 
       // Show updated profile
       const updatedProfile = await getUserProfile(userId);
       if (updatedProfile) {
-        bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+        await bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
           parse_mode: "Markdown",
           reply_markup: getUserEditProfileKeyboard(
             updatedProfile.notificationsEnabled

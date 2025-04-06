@@ -230,8 +230,8 @@ export function getUserEditProfileKeyboard(
       [
         {
           text: notificationsEnabled
-            ? "🔔 غیرفعال کردن اعلان‌ها"
-            : "🔕 فعال کردن اعلان‌ها",
+            ? "غیرفعال کردن اعلان‌ها 🔕"
+            : "فعال کردن اعلان‌ها 🔔",
           callback_data: "toggle_notifications",
         },
       ],

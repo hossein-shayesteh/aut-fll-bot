@@ -24,7 +24,7 @@ export class User {
   @Column({ default: false })
   isRegistered?: boolean;
 
-  @Column({ default: true })
+  @Column({ default: false })
   notificationsEnabled?: boolean;
 
   @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
