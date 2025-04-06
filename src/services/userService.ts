@@ -94,3 +94,15 @@ export async function getUsersByEventId(eventId: number): Promise<User[]> {
 
   return users;
 }
+
+export async function getAllUsersWithNotificationsEnabled(): Promise<User[]> {
+  try {
+    return await userRepository.find({
+      where: {
+        notificationsEnabled: true,
+      },
+    });
+  } catch (error) {
+    return [];
+  }
+}

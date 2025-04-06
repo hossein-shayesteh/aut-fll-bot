@@ -208,7 +208,9 @@ export function getFeedbackRatingKeyboard(
   };
 }
 
-export function getUserEditProfileKeyboard(): TelegramBot.InlineKeyboardMarkup {
+export function getUserEditProfileKeyboard(
+  notificationsEnabled: boolean = true
+): TelegramBot.InlineKeyboardMarkup {
   return {
     inline_keyboard: [
       [
@@ -223,6 +225,14 @@ export function getUserEditProfileKeyboard(): TelegramBot.InlineKeyboardMarkup {
         {
           text: "ویرایش شماره دانشجویی",
           callback_data: "profile_edit_student_id",
+        },
+      ],
+      [
+        {
+          text: notificationsEnabled
+            ? "🔔 غیرفعال کردن اعلان‌ها"
+            : "🔕 فعال کردن اعلان‌ها",
+          callback_data: "toggle_notifications",
         },
       ],
     ],

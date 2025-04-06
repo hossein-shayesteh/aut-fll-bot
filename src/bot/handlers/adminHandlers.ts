@@ -20,7 +20,10 @@ import {
   getEventRegistrants,
 } from "../../services/eventService";
 import { EventStatus } from "../../database/models/Event";
-import { getAllUsers } from "../../services/userService";
+import {
+  getAllUsers,
+  getAllUsersWithNotificationsEnabled,
+} from "../../services/userService";
 import {
   getAverageEventRating,
   getEventFeedbacks,
@@ -820,6 +823,38 @@ export function registerAdminHandlers(bot: TelegramBot) {
               reply_markup: getAdminMenuKeyboard(),
             }
           );
+
+          // Send notifications to users who have enabled notifications
+          const usersToNotify = await getAllUsersWithNotificationsEnabled();
+          let notificationsSent = 0;
+
+          for (const user of usersToNotify) {
+            try {
+              await bot.sendMessage(
+                user.telegramId,
+                `🔔 *رویداد جدید*\n\n*${escapeMarkdown(
+                  event.name
+                )}*\n${escapeMarkdown(
+                  event.description
+                )}\n\nتاریخ: ${new Intl.DateTimeFormat("fa-IR", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(
+                  event.eventDate
+                )}\n\nبرای ثبت‌نام به منوی "ثبت نام در رویدادها" مراجعه کنید.`,
+                { parse_mode: "Markdown" }
+              );
+              notificationsSent++;
+            } catch (error) {}
+          }
+
+          // Inform admin about notifications sent
+          if (usersToNotify.length > 0) {
+            bot.sendMessage(
+              chatId,
+              `Notifications sent to ${notificationsSent} users.`
+            );
+          }
 
           AdminStates.delete(userId);
         } catch (error) {

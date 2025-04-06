@@ -1,5 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
-import { findOrCreateUser, getUserProfile } from "../../services/userService";
+import {
+  findOrCreateUser,
+  getUserProfile,
+  updateUserProfile,
+} from "../../services/userService";
 import {
   getMainMenuKeyboard,
   getUserEditProfileKeyboard,
@@ -86,7 +90,9 @@ export function registerUserHandlers(bot: TelegramBot) {
             if (updatedProfile) {
               bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
                 parse_mode: "Markdown",
-                reply_markup: getUserEditProfileKeyboard(),
+                reply_markup: getUserEditProfileKeyboard(
+                  updatedProfile.notificationsEnabled
+                ),
               });
             }
           }
@@ -107,7 +113,9 @@ export function registerUserHandlers(bot: TelegramBot) {
             if (updatedProfile) {
               bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
                 parse_mode: "Markdown",
-                reply_markup: getUserEditProfileKeyboard(),
+                reply_markup: getUserEditProfileKeyboard(
+                  updatedProfile.notificationsEnabled
+                ),
               });
             }
           }
@@ -130,7 +138,9 @@ export function registerUserHandlers(bot: TelegramBot) {
             if (updatedProfile) {
               bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
                 parse_mode: "Markdown",
-                reply_markup: getUserEditProfileKeyboard(),
+                reply_markup: getUserEditProfileKeyboard(
+                  updatedProfile.notificationsEnabled
+                ),
               });
             }
           }
@@ -153,7 +163,9 @@ export function registerUserHandlers(bot: TelegramBot) {
             if (updatedProfile) {
               bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
                 parse_mode: "Markdown",
-                reply_markup: getUserEditProfileKeyboard(),
+                reply_markup: getUserEditProfileKeyboard(
+                  updatedProfile.notificationsEnabled
+                ),
               });
             }
           }
@@ -207,6 +219,9 @@ export function registerUserHandlers(bot: TelegramBot) {
     message += `نام خانوادگی: ${escapeMarkdown(profile.lastName) ?? ""}\n`;
     message += `شماره تلفن: ${profile.phoneNumber ?? ""}\n`;
     message += `شماره دانشجویی: ${profile.studentId ?? ""}\n`;
+    message += `وضعیت اعلان‌ها: ${
+      profile.notificationsEnabled ? "🔔 فعال" : "🔕 غیرفعال"
+    }\n`;
 
     return message;
   };
@@ -228,7 +243,7 @@ export function registerUserHandlers(bot: TelegramBot) {
 
     bot.sendMessage(chatId, buildProfileMessage(profile), {
       parse_mode: "Markdown",
-      reply_markup: getUserEditProfileKeyboard(),
+      reply_markup: getUserEditProfileKeyboard(profile.notificationsEnabled),
     });
   });
 
@@ -254,6 +269,7 @@ export function registerUserHandlers(bot: TelegramBot) {
       "profile_edit_last_name",
       "profile_edit_phone",
       "profile_edit_student_id",
+      "toggle_notifications",
       "back_to_main",
     ];
 
@@ -267,6 +283,39 @@ export function registerUserHandlers(bot: TelegramBot) {
       bot.sendMessage(chatId, "بازگشت به منوی اصلی", {
         reply_markup: getMainMenuKeyboard(userIsAdmin),
       });
+      return;
+    }
+
+    // Handle toggle notifications
+    if (data === "toggle_notifications") {
+      const profile = await getUserProfile(userId);
+      if (!profile) return;
+
+      // Toggle the notification setting
+      const newNotificationStatus = !profile.notificationsEnabled;
+
+      // Update the user profile
+      await updateUserProfile(userId, {
+        notificationsEnabled: newNotificationStatus,
+      });
+
+      // Send confirmation message
+      const message = newNotificationStatus
+        ? "اعلان‌های رویدادها با موفقیت فعال شد. 🔔 از این پس، از رویدادهای جدید مطلع خواهید شد."
+        : "اعلان‌های رویدادها غیرفعال شد. 🔕 دیگر اعلانی برای رویدادهای جدید دریافت نخواهید کرد.";
+
+      bot.sendMessage(chatId, message);
+
+      // Show updated profile
+      const updatedProfile = await getUserProfile(userId);
+      if (updatedProfile) {
+        bot.sendMessage(chatId, buildProfileMessage(updatedProfile), {
+          parse_mode: "Markdown",
+          reply_markup: getUserEditProfileKeyboard(
+            updatedProfile.notificationsEnabled
+          ),
+        });
+      }
       return;
     }
 
