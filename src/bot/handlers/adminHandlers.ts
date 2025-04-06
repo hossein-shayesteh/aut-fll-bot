@@ -721,18 +721,36 @@ export function registerAdminHandlers(bot: TelegramBot) {
       }
 
       userState.data.fee = fee;
-      userState.state = "CREATE_EVENT_UNIVERSITY_FEE";
 
-      bot.sendMessage(
-        chatId,
-        "Enter the event fee for university students (with student ID):",
-        {
-          reply_markup: {
-            keyboard: [[{ text: "Cancel" }]],
-            resize_keyboard: true,
-          },
-        }
-      );
+      // If fee is 0, automatically set university fee to 0 and skip to next step
+      if (fee === 0) {
+        userState.data.universityFee = 0;
+        userState.state = "CREATE_EVENT_DATE";
+
+        bot.sendMessage(
+          chatId,
+          "This event is free! Now enter the event date and time (format: YYYY-MM-DD HH:MM):",
+          {
+            reply_markup: {
+              keyboard: [[{ text: "Cancel" }]],
+              resize_keyboard: true,
+            },
+          }
+        );
+      } else {
+        userState.state = "CREATE_EVENT_UNIVERSITY_FEE";
+
+        bot.sendMessage(
+          chatId,
+          "Enter the event fee for university students (with student ID):",
+          {
+            reply_markup: {
+              keyboard: [[{ text: "Cancel" }]],
+              resize_keyboard: true,
+            },
+          }
+        );
+      }
     } else if (userState.state === "CREATE_EVENT_UNIVERSITY_FEE") {
       const universityFee = parseFloat(text);
 

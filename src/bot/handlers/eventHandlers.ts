@@ -657,9 +657,89 @@ export function registerEventHandlers(bot: TelegramBot) {
         }
 
         state.studentId = msg.text;
-        state.step = "collect_receipt_image";
 
+        // Check if the event is free
         const event = await getEventById(state.eventId);
+        if (event && event.fee === 0) {
+          // For free events, skip payment and auto-approve
+
+          // 1) Update user profile info in DB
+          await updateUserProfile(userId, {
+            firstName: state.firstName,
+            lastName: state.lastName,
+            phoneNumber: state.phoneNumber,
+            studentId: state.studentId,
+          });
+
+          // 2) Create registration in DB with approved status
+          const registration = await createRegistration(userId, state.eventId);
+
+          if (!registration) {
+            // Check if user is already approved for this event
+            const existingReg = await getRegistrationByUserAndEvent(
+              userId,
+              state.eventId
+            );
+
+            if (
+              existingReg &&
+              existingReg.status === RegistrationStatus.APPROVED
+            ) {
+              // Already approved for this event
+              bot.sendMessage(
+                chatId,
+                "شما قبلاً در این رویداد ثبت‌نام کرده‌اید و تأیید شده‌اید.",
+                { reply_markup: getMainMenuKeyboard(userIsAdmin) }
+              );
+            } else {
+              // Probably some other error (e.g., DB error)
+              bot.sendMessage(
+                chatId,
+                "ثبت‌نام با شکست مواجه شد. ممکن است رویداد پر شده باشد یا خطایی رخ داده باشد.",
+                { reply_markup: getMainMenuKeyboard(userIsAdmin) }
+              );
+            }
+          } else {
+            await updateRegistration(registration.id, {
+              status: RegistrationStatus.APPROVED,
+            });
+
+            // 3) Confirm to user
+            bot.sendMessage(
+              chatId,
+              "ثبت‌نام شما برای این رویداد رایگان با موفقیت انجام شد!",
+              {
+                reply_markup: getMainMenuKeyboard(userIsAdmin),
+              }
+            );
+
+            // Notify admin group about the free registration
+            try {
+              await sendMessageInTopic(
+                bot,
+                ADMIN_GROUP_ID,
+                event?.name || "",
+                `✅ *Free Event Registration*\n\nName: ${state.firstName} ${
+                  state.lastName
+                }\nPhone: ${state.phoneNumber}\nStudent ID: ${
+                  state.studentId || "None"
+                }\nEvent: "${escapeMarkdown(
+                  event.name
+                )}"\n\nThis registration was automatically approved as the event is free.`,
+                {
+                  parse_mode: "Markdown",
+                }
+              );
+            } catch (error) {}
+          }
+
+          // Clear state
+          registrationStates.delete(userId);
+          return;
+        }
+
+        // For paid events, continue with normal flow
+        state.step = "collect_receipt_image";
 
         const hasValidStudentId = state.studentId && state.studentId !== "0";
 
